@@ -1,0 +1,46 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  main:
+    allow-bean-definition-overriding: false
+    allow-circular-references: false
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 1000
+    show-sql: true
+    open-in-view: true
+
+logging:
+  level:
+    org:
+      springframework:
+        web: debug
+    ssafy:
+      ddada: debug
+
+springdoc:
+  default-consumes-media-type: application/json;charset=UTF-8
+  api-docs:
+    enabled: true
+    path: '/docs'
+  swagger-ui:
+    enabled: true
+    path: '/swagger'
+    try-it-out-enabled: true
+    operations-sorter: alpha
+
+management:
+  server:
+    port: 8081
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics, prometheus
