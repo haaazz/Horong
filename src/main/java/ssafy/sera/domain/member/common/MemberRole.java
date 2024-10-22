@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum MemberRole {
-    PLAYER("선수"), TEMP("임시 유저");
+    PLAYER("유저"), TEMP("임시 유저");
     private final String value;
 
 

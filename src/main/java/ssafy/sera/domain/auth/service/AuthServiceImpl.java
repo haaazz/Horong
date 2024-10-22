@@ -130,7 +130,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private boolean isNotRegisteredPlayer(UserInfo userInfo) {
-        log.debug("[AuthService] 미가입 선수 확인 >>>> 선수 이메일: {}", userInfo.email());
+        log.debug("[AuthService] 미가입 유저 확인 >>>> 유저 이메일: {}", userInfo.email());
         String email = userInfo.email();
         Member member = findMemberByEmail(email).orElse(null);
 

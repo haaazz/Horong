@@ -5,18 +5,18 @@ import ssafy.sera.domain.member.common.Gender;
 import ssafy.sera.domain.member.entity.User;
 
 
-@Schema(description = "선수 정보 요약 응답 DTO")
+@Schema(description = "유저 정보 요약 응답 DTO")
 public record UserSimpleResponse(
-        @Schema(description = "선수 ID")
+        @Schema(description = "유저 ID")
         Long id,
 
-        @Schema(description = "선수 별명")
+        @Schema(description = "유저 별명")
         String nickname,
 
-        @Schema(description = "선수 성별")
+        @Schema(description = "유저 성별")
         Gender gender,
 
-        @Schema(description = "선수 프로필 이미지 presigned url")
+        @Schema(description = "유저 프로필 이미지 presigned url")
         String image
 ) {
     public static UserSimpleResponse from(User user, String image) {

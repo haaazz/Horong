@@ -8,7 +8,7 @@ import ssafy.sera.domain.member.common.Gender;
 
 import java.time.LocalDate;
 
-@Schema(description = "선수 회원가입 요청 DTO")
+@Schema(description = "유저 회원가입 요청 DTO")
 public record UserSignupRequest(
         @Size(min = 2, max = 20)
         @Schema(description = "닉네임", example = "쿠잉비", minimum = "2", maximum = "20")

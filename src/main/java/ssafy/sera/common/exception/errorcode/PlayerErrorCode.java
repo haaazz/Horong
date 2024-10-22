@@ -26,7 +26,7 @@ public enum PlayerErrorCode implements BaseErrorCode {
     LOGIN_TYPE_NOT_SUPPORTED(NOT_FOUND, "PLAYER_404_8", "지원하지 않는 로그인 타입입니다."),
 
     PLAYER_ALREADY_DELETED(CONFLICT, "PLAYER_409_1", "이미 삭제된 회원입니다."),
-    PLAYER_ALREADY_BOOKED(CONFLICT, "PLAYER_409_2", "같은 시간에 다른 경기가 이미 예약된 선수입니다."),
+    PLAYER_ALREADY_BOOKED(CONFLICT, "PLAYER_409_2", "같은 시간에 다른 경기가 이미 예약된 유저입니다."),
 
     ABNORMAL_LOGIN_PROGRESS(INTERNAL_SERVER_ERROR, "PLAYER_500_1", "비정상적으로 로그인이 진행되었습니다.");
 

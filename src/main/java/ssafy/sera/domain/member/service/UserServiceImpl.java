@@ -43,7 +43,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserSignupResponse signupMember(MemberSignupCommand signupCommand) {
-        log.info("[UserService] 선수 회원가입");
+        log.info("[UserService] 유저 회원가입");
         User existingUser = userRepository.findByEmail(signupCommand.email())
                 .orElse(null);
 
@@ -71,7 +71,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDetailResponse getMemberDetail() {
-        log.info("[UserService] 선수 정보 조회");
+        log.info("[UserService] 유저 정보 조회");
         User currentUser = getCurrentLoggedInMember();
         String preSignedProfileImage = generatePreSignedUrl(currentUser.getImage());
 
@@ -83,7 +83,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserProfileDetailResponse getMemberProfileDetail() {
-        log.info("[UserService] 선수 상세 프로필 조회");
+        log.info("[UserService] 유저 상세 프로필 조회");
         User currentUser = getCurrentLoggedInMember();
         String preSignedProfileImage = generatePreSignedUrl(currentUser.getImage());
 
@@ -100,7 +100,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserDetailResponse updateMemberProfile(UpdateProfileCommand command) {
-        log.info("[UserService] 선수 정보 변경");
+        log.info("[UserService] 유저 정보 변경");
         User currentUser = getCurrentLoggedInMember();
 
         MultipartFile profileImageFile = command.profileImagePath();
@@ -125,7 +125,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public String deleteMember() {
-        log.info("[UserService] 선수 탈퇴");
+        log.info("[UserService] 유저 탈퇴");
         User currentUser = getCurrentLoggedInMember();
         currentUser.delete();
         userRepository.save(currentUser);

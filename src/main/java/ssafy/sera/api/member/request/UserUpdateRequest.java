@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 import org.springframework.web.multipart.MultipartFile;
 import ssafy.sera.domain.member.command.UpdateProfileCommand;
 
-@Schema(description = "선수 정보 변경 요청 DTO")
+@Schema(description = "유저 정보 변경 요청 DTO")
 public record UserUpdateRequest(
         @Size(min = 2, max = 20)
         @Schema(description = "닉네임", example = "쿠잉비")
