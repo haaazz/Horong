@@ -51,13 +51,13 @@ public class S3Util {
         return location + memberId + extension;
     }
 
-    public String uploadImageToS3(MultipartFile imageFile, Long playerId, String location, String existingImageUrl) {
+    public String uploadImageToS3(MultipartFile imageFile, Long userId, String location, String existingImageUrl) {
         if (imageFile == null || imageFile.isEmpty()) {
             return existingImageUrl != null && !existingImageUrl.isEmpty() ? existingImageUrl : S3_IMAGE.DEFAULT_URL;
         }
 
         try {
-            String fileName = getS3FileName(imageFile, playerId, location);
+            String fileName = getS3FileName(imageFile, userId, location);
             amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), fileName, imageFile.getInputStream(), null));
             return amazonS3Client.getUrl(s3Properties.s3().bucket(), fileName).toString();
         } catch (IOException e) {

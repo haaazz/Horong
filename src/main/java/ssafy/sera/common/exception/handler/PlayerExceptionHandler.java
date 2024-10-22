@@ -10,7 +10,7 @@ import ssafy.sera.common.exception.User.*;
 
 @RestControllerAdvice
 @Slf4j
-public class PlayerExceptionHandler {
+public class UserExceptionHandler {
     @ExceptionHandler(AbnormalLoginProgressException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public CommonResponse handleAbnormalLoginProgressException(AbnormalLoginProgressException e) {
@@ -25,17 +25,17 @@ public class PlayerExceptionHandler {
         return CommonResponse.badRequest(e.getErrorCode());
     }
 
-    @ExceptionHandler(TempPlayerNotFoundException.class)
+    @ExceptionHandler(TempUserNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public CommonResponse handleNotFoundTempPlayer(TempPlayerNotFoundException e) {
-        log.error("TempPlayerNotFoundException Error", e);
+    public CommonResponse handleNotFoundTempUser(TempUserNotFoundException e) {
+        log.error("TempUserNotFoundException Error", e);
         return CommonResponse.badRequest(e.getErrorCode());
     }
 
-    @ExceptionHandler(PlayerAlreadyDeletedException.class)
+    @ExceptionHandler(UserAlreadyDeletedException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public CommonResponse handleMemberAlreadyDeletedException(PlayerAlreadyDeletedException e) {
-        log.error("PlayerAlreadyDeletedException Error", e);
+    public CommonResponse handleMemberAlreadyDeletedException(UserAlreadyDeletedException e) {
+        log.error("UserAlreadyDeletedException Error", e);
         return CommonResponse.conflict(e.getErrorCode());
     }
 
@@ -76,15 +76,15 @@ public class PlayerExceptionHandler {
 
     @ExceptionHandler(KakaoMailUserNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public CommonResponse handleKakaoMailPlayerNotFoundException(KakaoMailUserNotFoundException e) {
+    public CommonResponse handleKakaoMailUserNotFoundException(KakaoMailUserNotFoundException e) {
         log.error("KakaoMailUserNotFoundException Error", e);
         return CommonResponse.badRequest(e.getErrorCode());
     }
 
-    @ExceptionHandler(EmailDuplicateException.class)
+    @ExceptionHandler(UserIdDuplicateException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public CommonResponse handleEmailDuplicateException(EmailDuplicateException e) {
-        log.error("EmailDuplicateException Error", e);
+    public CommonResponse handleEmailDuplicateException(UserIdDuplicateException e) {
+        log.error("UserIdDuplicateException Error", e);
         return CommonResponse.conflict(e.getErrorCode());
     }
 
@@ -95,10 +95,10 @@ public class PlayerExceptionHandler {
         return CommonResponse.conflict(e.getErrorCode());
     }
 
-    @ExceptionHandler(PlayerAlreadyBookedException.class)
+    @ExceptionHandler(UserAlreadyBookedException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public CommonResponse<?> handlePlayerAlreadyBookedException(PlayerAlreadyBookedException e) {
-        log.error("PlayerAlreadyBookedException occurs", e);
+    public CommonResponse<?> handleUserAlreadyBookedException(UserAlreadyBookedException e) {
+        log.error("UserAlreadyBookedException occurs", e);
         return CommonResponse.conflict(e.getErrorCode());
     }
 }

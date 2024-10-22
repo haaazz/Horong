@@ -13,8 +13,8 @@ import ssafy.sera.common.exception.token.TokenTypeNotMatchedException;
 import ssafy.sera.common.properties.JwtProperties;
 import ssafy.sera.domain.auth.model.DecodedJwtToken;
 import ssafy.sera.domain.auth.model.LoginToken;
-import ssafy.sera.domain.member.common.Member;
 import ssafy.sera.domain.member.common.MemberRole;
+import ssafy.sera.domain.member.entity.User;
 import ssafy.sera.domain.redis.BlacklistTokenRedisRepository;
 import ssafy.sera.domain.redis.RefreshTokenRedisRepository;
 
@@ -70,7 +70,7 @@ public class JwtProcessor {
                 .orElseThrow(InvalidTokenException::new);
     }
 
-    public void renewRefreshToken(String oldRefreshToken, String newRefreshToken, Member member) {
+    public void renewRefreshToken(String oldRefreshToken, String newRefreshToken, User member) {
         refreshTokenRedisRepository.save(newRefreshToken, String.valueOf(member.getId()));
         expireToken(oldRefreshToken);
     }
@@ -101,12 +101,12 @@ public class JwtProcessor {
         return getClaim(token).getPayload().getExpiration().before(new Date());
     }
 
-    public String generateAccessToken(Member member) {
+    public String generateAccessToken(User user) {
         log.debug("access token exp : {}", jwtProperties.accessTokenExp());
-        return issueToken(member.getId(), member.getRole(), ACCESS_TOKEN, jwtProperties.accessTokenExp());
+        return issueToken(user.getId(), user.getRole(), ACCESS_TOKEN, jwtProperties.accessTokenExp());
     }
 
-    public String generateRefreshToken(Member member) {
+    public String generateRefreshToken(User member) {
         return issueToken(member.getId(), member.getRole(), REFRESH_TOKEN, jwtProperties.refreshTokenExp());
     }
 

@@ -1,10 +1,10 @@
 package ssafy.sera.common.exception.User;
 
 import ssafy.sera.common.exception.BaseException;
-import ssafy.sera.common.exception.errorcode.PlayerErrorCode;
+import ssafy.sera.common.exception.errorcode.UserErrorCode;
 
-public class TempPlayerNotFoundException extends BaseException {
-    public TempPlayerNotFoundException() {
-        super(PlayerErrorCode.TEMP_PLAYER_NOT_FOUND);
+public class TempUserNotFoundException extends BaseException {
+    public TempUserNotFoundException() {
+        super(UserErrorCode.TEMP_USER_NOT_FOUND);
     }
 }

@@ -36,7 +36,7 @@ public class MemberController {
         return CommonResponse.ok(response);
     }
 
-    @PreAuthorize("hasRole('ROLE_PLAYER')")
+    @PreAuthorize("hasRole('ROLE_USER')")
     @Operation(summary = "회원 탈퇴", description = "회원 정보를 삭제하는 API입니다.")
     @PatchMapping
     public CommonResponse<?> deleteMember() {
@@ -54,7 +54,7 @@ public class MemberController {
         return CommonResponse.ok(message, null);
     }
 
-    @PreAuthorize("hasRole('ROLE_PLAYER')")
+    @PreAuthorize("hasRole('ROLE_USER')")
     @Operation(summary = "로그인 시 회원 정보 조회", description = "로그인 시 회원 정보를 조회하는 API입니다.")
     @GetMapping
     public CommonResponse<UserDetailResponse> getMemberDetail() {
@@ -63,7 +63,7 @@ public class MemberController {
         return CommonResponse.ok(response);
     }
 
-    @PreAuthorize("hasRole('ROLE_PLAYER')")
+    @PreAuthorize("hasRole('ROLE_USER')")
     @Operation(summary = "프로필에서 회원 정보 조회", description = "프로필에서 회원 정보를 조회하는 API입니다.")
     @GetMapping("/profile")
     public CommonResponse<UserProfileDetailResponse> getMemberProfileDetail() {
@@ -72,7 +72,7 @@ public class MemberController {
         return CommonResponse.ok(response);
     }
 
-    @PreAuthorize("hasRole('ROLE_PLAYER')")
+    @PreAuthorize("hasRole('ROLE_USER')")
     @Operation(summary = "회원 정보 수정", description = "회원 정보를 수정하는 API입니다.")
     @PutMapping(value = "/profile", consumes = { "multipart/form-data" })
     public CommonResponse<UserDetailResponse> updateMemberProfile(@ModelAttribute @Validated UserUpdateRequest request) {
@@ -89,7 +89,7 @@ public class MemberController {
         return CommonResponse.ok("비밀번호가 성공적으로 변경되었습니다.", null);
     }
 
-    @PreAuthorize("hasRole('ROLE_PLAYER')")
+    @PreAuthorize("hasRole('ROLE_USER')")
     @Operation(summary = "플레이어의 ID 조회", description = "나의 id를 조회하는 API입니다.")
     @GetMapping("/id")
     public CommonResponse<UserIdResponse> getUserId() {

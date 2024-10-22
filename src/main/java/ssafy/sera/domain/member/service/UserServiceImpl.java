@@ -11,7 +11,7 @@ import ssafy.sera.api.member.response.UserIdResponse;
 import ssafy.sera.api.member.response.UserProfileDetailResponse;
 import ssafy.sera.api.member.response.UserSignupResponse;
 import ssafy.sera.common.constant.global.S3_IMAGE;
-import ssafy.sera.common.exception.User.EmailDuplicateException;
+import ssafy.sera.common.exception.User.UserIdDuplicateException;
 import ssafy.sera.common.exception.User.PasswordNotMatchException;
 import ssafy.sera.common.exception.security.InvalidPasswordException;
 import ssafy.sera.common.exception.security.NotAuthenticatedException;
@@ -25,8 +25,11 @@ import ssafy.sera.domain.member.command.PasswordUpdateCommand;
 import ssafy.sera.domain.member.command.UpdateProfileCommand;
 import ssafy.sera.domain.member.common.PasswordHistory;
 import ssafy.sera.domain.member.entity.User;
+import ssafy.sera.domain.member.repository.PasswordHistoryRepository;
 import ssafy.sera.domain.member.repository.UserRepository;
 import ssafy.sera.common.exception.User.*;
+
+import java.time.LocalDateTime;
 
 
 @Slf4j
@@ -39,29 +42,30 @@ public class UserServiceImpl implements UserService {
     private final JwtProcessor jwtProcessor;
     private final PasswordEncoder passwordEncoder;
     private final S3Util s3Util;
+    private final PasswordHistoryRepository passwordHistoryRepository;
 
     @Override
     @Transactional
     public UserSignupResponse signupMember(MemberSignupCommand signupCommand) {
         log.info("[UserService] 유저 회원가입");
-        User existingUser = userRepository.findByEmail(signupCommand.email())
+        User existingUser = userRepository.findByUserId(signupCommand.userId())
                 .orElse(null);
 
-        if (isDuplicateEmail(existingUser)) {
-            throw new EmailDuplicateException();
+        if (isDuplicateUserId(existingUser)) {
+            throw new UserIdDuplicateException();
         }
 
-        User playerToSave = existingUser != null ? existingUser : createNewUser(signupCommand);
+        User userToSave = existingUser != null ? existingUser : createNewUser(signupCommand);
         MultipartFile imageFile = signupCommand.imageUrl();
-        String imageUrl = handleProfileImage(imageFile, playerToSave.getId(), playerToSave.getImage());
+        String imageUrl = handleProfileImage(imageFile, userToSave.getId(), userToSave.getProfileImg());
 
         String encodedPassword = passwordEncoder.encode(signupCommand.password());
-        playerToSave.signupMember(signupCommand, imageUrl, encodedPassword);
-        userRepository.save(playerToSave);
+        userToSave.signupMember(signupCommand, imageUrl, encodedPassword);
+        userRepository.save(userToSave);
 
         try {
-            String accessToken = jwtProcessor.generateAccessToken(playerToSave);
-            String refreshToken = jwtProcessor.generateRefreshToken(playerToSave);
+            String accessToken = jwtProcessor.generateAccessToken(userToSave);
+            String refreshToken = jwtProcessor.generateRefreshToken(userToSave);
             jwtProcessor.saveRefreshToken(accessToken, refreshToken);
             return UserSignupResponse.of(accessToken, refreshToken);
         } catch (Exception e) {
@@ -73,7 +77,7 @@ public class UserServiceImpl implements UserService {
     public UserDetailResponse getMemberDetail() {
         log.info("[UserService] 유저 정보 조회");
         User currentUser = getCurrentLoggedInMember();
-        String preSignedProfileImage = generatePreSignedUrl(currentUser.getImage());
+        String preSignedProfileImage = generatePreSignedUrl(currentUser.getProfileImg());
 
         return UserDetailResponse.of(
                 preSignedProfileImage,
@@ -85,15 +89,11 @@ public class UserServiceImpl implements UserService {
     public UserProfileDetailResponse getMemberProfileDetail() {
         log.info("[UserService] 유저 상세 프로필 조회");
         User currentUser = getCurrentLoggedInMember();
-        String preSignedProfileImage = generatePreSignedUrl(currentUser.getImage());
+        String preSignedProfileImage = generatePreSignedUrl(currentUser.getProfileImg());
 
         return UserProfileDetailResponse.of(
                 preSignedProfileImage,
-                currentUser.getNickname(),
-                currentUser.getGender(),
-                currentUser.getNumber(),
-                currentUser.getEmail(),
-                currentUser.getDescription()
+                currentUser.getNickname()
         );
     }
 
@@ -106,14 +106,13 @@ public class UserServiceImpl implements UserService {
         MultipartFile profileImageFile = command.profileImagePath();
         String imageUrl = S3_IMAGE.DEFAULT_URL;
         if (!command.deleteImage()) {
-            imageUrl = handleProfileImage(profileImageFile, currentUser.getId(), currentUser.getImage());
+            imageUrl = handleProfileImage(profileImageFile, currentUser.getId(), currentUser.getProfileImg());
         }// MultipartFile로 변경
         String preSignedUrl = generatePreSignedUrl(imageUrl);
 
         String updatedNickname = getUpdatedField(command.nickname(), currentUser.getNickname());
-        String updatedDescription = getUpdatedField(command.description(), currentUser.getDescription());
 
-        currentUser.updateProfile(updatedNickname, imageUrl, updatedDescription);
+        currentUser.updateProfile(updatedNickname, imageUrl);
         userRepository.save(currentUser);
 
         return UserDetailResponse.of(
@@ -144,35 +143,39 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void updateMemberPassword(PasswordUpdateCommand command) {
         log.info("[UserService] 비밀번호 변경");
-        User player = getUserForPasswordUpdate(command);
+        User user = getUserForPasswordUpdate(command);
 
-        verifyCurrentPassword(command.currentPassword(), player);
-        verifyNewPassword(command.newPassword(), player);
+        verifyCurrentPassword(command.currentPassword(), user);
+        verifyNewPassword(command.newPassword(), user);
 
         String encodedNewPassword = passwordEncoder.encode(command.newPassword());
-        player.updatePassword(encodedNewPassword);
-        userRepository.save(player);
+        user.updatePassword(encodedNewPassword);
+
+        PasswordHistory passwordHistory = PasswordHistory.builder()
+                .user(user)
+                .password(encodedNewPassword)
+                .changedAt(LocalDateTime.now())
+                .build();
+
+        passwordHistoryRepository.save(passwordHistory);
+
+        userRepository.save(user);
     }
 
-    private boolean isDuplicateEmail(User existingUser) {
-        return existingUser != null && !existingUser.getIsDeleted();
+
+    private boolean isDuplicateUserId(User existingUser) {
+        return existingUser != null && !existingUser.isDeleted();
     }
 
     private User createNewUser(MemberSignupCommand command) {
         return User.builder()
-                .email(command.email())
-                .gender(command.gender())
-                .birth(command.birth())
                 .nickname(command.nickname())
                 .password(passwordEncoder.encode(command.password()))
-                .number(command.number())
-                .description(command.description())
-                .rating(0)
                 .build();
     }
 
-    private String handleProfileImage(MultipartFile imageFile, Long playerId, String existingImageUrl) {
-        return s3Util.uploadImageToS3(imageFile, playerId, "profileImg/", existingImageUrl);
+    private String handleProfileImage(MultipartFile imageFile, Long userId, String existingImageUrl) {
+        return s3Util.uploadImageToS3(imageFile, userId, "profileImg/", existingImageUrl);
     }
 
     private String generatePreSignedUrl(String imageUrl) {
@@ -194,35 +197,35 @@ public class UserServiceImpl implements UserService {
     private User getCurrentLoggedInMember() {
         Long userId = SecurityUtil.getLoginMemberId()
                 .orElseThrow(NotAuthenticatedException::new);
-        User player = userRepository.findById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(MemberNotFoundException::new);
 
-        if (player.getIsDeleted()){
+        if (user.isDeleted()){
             throw new NotAuthenticatedException();
         }
-        return player;
+        return user;
     }
 
     private User getUserForPasswordUpdate(PasswordUpdateCommand command) {
         if (command.email() != null) {
-            return userRepository.findNotDeletedUserByEmail(command.email())
+            return userRepository.findNotDeletedUserByUserId(command.email())
                     .orElseThrow(MemberNotFoundException::new);
         }
         return getCurrentLoggedInMember();
     }
 
-    private void verifyCurrentPassword(String currentPassword, User player) {
-        if (!passwordEncoder.matches(currentPassword, player.getPassword())) {
+    private void verifyCurrentPassword(String currentPassword, User user) {
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
             throw new PasswordNotMatchException();
         }
     }
 
-    private void verifyNewPassword(String newPassword, User player) {
+    private void verifyNewPassword(String newPassword, User user) {
         if (newPassword.length() < 8 || !newPassword.matches(".*[!@#\\$%^&*].*")) {
             throw new InvalidPasswordException();
         }
 
-        for (PasswordHistory history : player.getPasswordHistories()) {
+        for (PasswordHistory history : passwordHistoryRepository.getHistoriesByUserId(user.getId())) {
             if (passwordEncoder.matches(newPassword, history.getPassword())) {
                 throw new PasswordUsedException();
             }
@@ -230,8 +233,8 @@ public class UserServiceImpl implements UserService {
     }
 
     public UserIdResponse getMemberId() {
-        Long playerId = SecurityUtil.getLoginMemberId()
+        Long userId = SecurityUtil.getLoginMemberId()
                 .orElseThrow(NotAuthenticatedException::new);
-        return UserIdResponse.of(playerId);
+        return UserIdResponse.of(userId);
     }
 }

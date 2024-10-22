@@ -12,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    Optional<User> findByEmail(String email);
+    Optional<User> findByUserId(String UserId);
 
     @Query("""
         SELECT COUNT(p) > 0
@@ -24,14 +24,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
         SELECT p
         FROM User p
-        WHERE p.email = :email AND p.isDeleted = false
+        WHERE p.userId = :email AND p.isDeleted = false
     """)
-    Optional<User> findNotDeletedUserByEmail(@Param("email") String email);
+    Optional<User> findNotDeletedUserByUserId(@Param("userId") String userId);
 
     @Query("""
         SELECT p
         FROM User p
-        WHERE p.isDeleted = true AND p.updatedAt < CURRENT_DATE - 1 MONTH
+        WHERE p.isDeleted = true
     """)
-    List<User> findDeletedPlayers();
+    List<User> findDeletedUsers();
 }

@@ -21,8 +21,8 @@ public class PasswordHistory {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "player_id", nullable = false)
-    private User player;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(nullable = false)
     private String password;
@@ -31,4 +31,8 @@ public class PasswordHistory {
     @Column(updatable = false, nullable = false)
     private LocalDateTime changedAt;
 
+    public void PasswordHistory(User user, String password) {
+        this.user = user;
+        this.password = password;
+    }
 }

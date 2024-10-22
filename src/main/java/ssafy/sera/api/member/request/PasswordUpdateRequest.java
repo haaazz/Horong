@@ -11,7 +11,7 @@ public record PasswordUpdateRequest(
         @Schema(description = "변경할 비밀번호", example = "password1234")
         String newPassword,
 
-        @Schema(description = "플레이어의 이메일", example = "player1@gmail.com")
+        @Schema(description = "플레이어의 이메일", example = "user1@gmail.com")
         String email
 ) {
     public PasswordUpdateCommand toCommand() {
