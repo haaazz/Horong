@@ -8,8 +8,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ssafy.sera.api.community.response.getCommentResponse;
-import ssafy.sera.api.community.response.getPostResponse;
+import ssafy.sera.api.community.response.GetCommentResponse;
+import ssafy.sera.api.community.response.GetPostResponse;
 import ssafy.sera.common.util.S3Util;
 import ssafy.sera.common.util.SecurityUtil;
 import ssafy.sera.domain.community.command.CreateCommentCommand;
@@ -72,7 +72,7 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     @Override
-    public getPostResponse getPostById(Long id) {
+    public GetPostResponse getPostById(Long id) {
         log.info("게시글 조회: {}", id);
 
         // 게시글 조회
@@ -80,8 +80,8 @@ public class CommunityServiceImpl implements CommunityService {
                 .orElseThrow(() -> new ResourceNotFoundException("게시글이 존재하지 않습니다."));
 
         // 댓글 정보를 DTO로 변환
-        List<getCommentResponse> commentResponses = post.getComments().stream()
-                .map(comment -> new getCommentResponse(
+        List<GetCommentResponse> commentResponses = post.getComments().stream()
+                .map(comment -> new GetCommentResponse(
                         comment.getId(),
                         comment.getContent(),
                         comment.getAuthor().getNickname(),
@@ -94,7 +94,7 @@ public class CommunityServiceImpl implements CommunityService {
             presignedUrls.add(s3Util.getPresignedUrlFromS3(image));
         }
 
-        return new getPostResponse(
+        return new GetPostResponse(
                 post.getId(),
                 post.getTitle(),
                 post.getContent(),
@@ -105,15 +105,15 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     @Override
-    public Page<getPostResponse> getPostList(Pageable pageable) {
+    public Page<GetPostResponse> getPostList(Pageable pageable) {
         log.info("모든 게시글 조회 (페이지네이션)");
         Page<Post> postPage = boardRepository.findAll(pageable);
 
-        List<getPostResponse> postResponses = new ArrayList<>();
+        List<GetPostResponse> postResponses = new ArrayList<>();
         for (Post post : postPage.getContent()) {
-            List<getCommentResponse> commentResponses = new ArrayList<>();
+            List<GetCommentResponse> commentResponses = new ArrayList<>();
             for (Comment comment : post.getComments()) {
-                getCommentResponse commentResponse = new getCommentResponse(
+                GetCommentResponse commentResponse = new GetCommentResponse(
                         comment.getId(),
                         comment.getContent(),
                         comment.getAuthor().getNickname(),
@@ -125,7 +125,7 @@ public class CommunityServiceImpl implements CommunityService {
             for (String image : post.getImages()) {
                 presignedUrls.add(s3Util.getPresignedUrlFromS3(image));
             }
-            getPostResponse postResponse = new getPostResponse(
+            GetPostResponse postResponse = new GetPostResponse(
                     post.getId(),
                     post.getTitle(),
                     post.getContent(),

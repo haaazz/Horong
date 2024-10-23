@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 @Schema(description = "게시글 리스트 응답 DTO")
-public record getPostResponse(
+public record GetPostResponse(
         @Schema(description = "게시글 id", example = "1")
         Long postId,
         @Schema(description = "게시글 제목", example = "게시글 제목입니다.")
@@ -17,6 +17,6 @@ public record getPostResponse(
         @Schema(description = "게시글 이미지 리스트", example = "https://my-bucket.s3.amazonaws.com/sample-image.jpg\n")
         List<String> imageList,
         @Schema(description = "댓글 리스트")
-        List<getCommentResponse> comments
+        List<GetCommentResponse> comments
 ) {
 }

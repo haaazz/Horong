@@ -3,7 +3,7 @@ package ssafy.sera.api.community.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "댓글 응답 DTO")
-public record getCommentResponse(
+public record GetCommentResponse(
         @Schema(description = "댓글 id", example = "1")
         Long id,
         @Schema(description = "댓글 내용", example = "댓글 내용입니다.")
