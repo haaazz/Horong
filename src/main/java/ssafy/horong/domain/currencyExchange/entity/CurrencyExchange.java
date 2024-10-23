@@ -20,7 +20,7 @@ public class CurrencyExchange {
     @Column(name = "address", nullable = false, length = 255)
     private String address;  // 환전소 주소
 
-    @Column(name = "name", nullable = false, length = 20)
+    @Column(name = "name", nullable = false, length = 40)
     private String name;  // 환전소 이름
 
     @Column(name = "business_hours", nullable = false, length = 100)

@@ -9,18 +9,22 @@ import org.springframework.data.elasticsearch.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ssafy.horong.api.community.response.GetCommentResponse;
+import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
 import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.entity.BoardType;
+import ssafy.horong.domain.community.entity.Message;
 import ssafy.horong.domain.community.entity.Post;
 import ssafy.horong.domain.community.entity.Comment;
 import ssafy.horong.domain.community.repository.BoardRepository;
 import ssafy.horong.domain.community.repository.CommentRepository;
+import ssafy.horong.domain.community.repository.MessageRepository;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +38,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final CommentRepository commentRepository;
     private final S3Util s3Util;
     private final UserRepository userRepository;
+    private final MessageRepository messageRepository;
 
     @Override
     @Transactional
@@ -81,8 +86,7 @@ public class CommunityServiceImpl implements CommunityService {
                 .map(comment -> new GetCommentResponse(
                         comment.getId(),
                         comment.getContent(),
-                        comment.getAuthor().getNickname(),
-                        comment.getCreatedDate().toString()
+                        comment.getAuthor().getNickname()
                 ))
                 .toList();
 
@@ -113,8 +117,7 @@ public class CommunityServiceImpl implements CommunityService {
                 GetCommentResponse commentResponse = new GetCommentResponse(
                         comment.getId(),
                         comment.getContent(),
-                        comment.getAuthor().getNickname(),
-                        comment.getCreatedDate().toString()
+                        comment.getAuthor().getNickname()
                 );
                 commentResponses.add(commentResponse);
             }
@@ -184,8 +187,7 @@ public class CommunityServiceImpl implements CommunityService {
                     new GetCommentResponse(
                             comment.getId(),
                             comment.getContent(),
-                            comment.getAuthor().getNickname(),
-                            comment.getCreatedDate().toString()
+                            comment.getAuthor().getNickname()
                     )
             ).toList();
 
@@ -203,4 +205,40 @@ public class CommunityServiceImpl implements CommunityService {
 
         return new PageImpl<>(postResponses, pageable, postPage.getTotalElements());
     }
+
+    @Override
+    @Transactional
+    public void sendMessage(SendMessageCommand command) {
+
+        String to = command.receiverNickname();
+        String from = getCurrentUser().getNickname();
+        String text = "from" + from + "to" + to;
+
+        String imageUrl = s3Util.uploadImageToS3(command.image(), text, "message/");
+        log.info("{}에게 메시지 전송", imageUrl);
+        messageRepository.save(Message.builder()
+                .content(command.content())        // 메시지 내용
+                .image(imageUrl)                      // 업로드된 이미지 URL
+                .sender(getCurrentUser())             // 현재 로그인된 유저를 발신자로 설정
+                .recipient(userRepository.findByNickname(to)) // 수신자 설정 (DB에서 조회)
+                .createdAt(LocalDateTime.now())       // 생성 시간 설정
+                .build());
+    }
+
+    @Override
+    public List<GetMessageListResponse> getMessageList(GetMessageListCommand command) {
+        List<Message> messages = messageRepository.findBySenderIdAndRecipient(command.senderId(), getCurrentUser().getId());
+        List<GetMessageListResponse> messageResponses = new ArrayList<>();
+
+        for (Message message : messages) {
+            GetMessageListResponse response = new GetMessageListResponse(
+                    message.getContent(),
+                    s3Util.getPresignedUrlFromS3(message.getImage()),
+                    message.getSender().getNickname()
+            );
+            messageResponses.add(response);
+        }
+        return messageResponses;
+    }
+
 }

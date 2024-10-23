@@ -24,7 +24,6 @@ public class authController {
     @Operation(summary = "로그인", description = "유저 정보를 이용하여 login type으로 로그인 합니다.")
     @PostMapping("/login")
     public CommonResponse<AuthResponse> login(@RequestBody LoginRequest request) {
-        log.info("[AuthController] 로그인 >>>> 로그인 타입: {}, 이메일: {}", request.loginType(), request.email());
         AuthResponse loginResponse = authService.login(request.toCommand());
         return CommonResponse.ok(loginResponse);
     }
