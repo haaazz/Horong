@@ -1,11 +1,14 @@
 package ssafy.sera.domain.member.entity;
 
-import co.elastic.clients.elasticsearch._types.analysis.Language;
 import jakarta.persistence.*;
 import lombok.*;
 import ssafy.sera.common.constant.global.S3_IMAGE;
+import ssafy.sera.domain.community.entity.Post;
 import ssafy.sera.domain.member.command.MemberSignupCommand;
+import ssafy.sera.domain.member.common.Language;
 import ssafy.sera.domain.member.common.MemberRole;
+
+import java.util.List;
 
 @Entity
 @Getter
@@ -25,7 +28,7 @@ public class User {
     @Column(nullable = false, length = 10)
     private String nickname;
 
-    @Column(nullable = false, length = 60)
+    @Column(nullable = false, length = 20)
     private String password; // 비밀번호는 8~20자까지 설정 가능
 
     @Column(length = 100)
@@ -40,6 +43,9 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     private MemberRole role;
+
+    @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Post> boards;
 
     @Builder
     public User(String password, String nickname, String image) {
@@ -69,7 +75,6 @@ public class User {
         this.profileImg = profileImagePath;
     }
 
-    // 비밀번호 변경 전에 이력을 저장
     public void updatePassword(String newPassword) {
         this.password = newPassword;
     }

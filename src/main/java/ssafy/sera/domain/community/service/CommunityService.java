@@ -1,17 +1,20 @@
 package ssafy.sera.domain.community.service;
 
-import ssafy.sera.domain.community.entity.Board;
-import ssafy.sera.domain.community.entity.Comment;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import ssafy.sera.api.community.response.getPostResponse;
+import ssafy.sera.domain.community.command.CreateCommentCommand;
+import ssafy.sera.domain.community.command.CreatePostCommand;
+import ssafy.sera.domain.community.command.UpdateCommentCommand;
+import ssafy.sera.domain.community.command.UpdatePostCommand;
 
 public interface CommunityService {
-    Board createBoard(Board board);
-    Board updateBoard(Long id, Board board);
-    void deleteBoard(Long id);
-    Board getBoardById(Long id);
-    List<Board> getAllBoards();
-    Comment createComment(Long boardId, Comment comment);
+    void createPost(CreatePostCommand command);
+    void updatePost(UpdatePostCommand command);
+    void deletePost(Long id);
+    getPostResponse getPostById(Long id);
+    Page<getPostResponse> getPostList(Pageable pageable);
+    void createComment(CreateCommentCommand command);
+    void updateComment(UpdateCommentCommand command);
     void deleteComment(Long commentId);
-    List<Comment> getCommentsByBoardId(Long boardId);
 }

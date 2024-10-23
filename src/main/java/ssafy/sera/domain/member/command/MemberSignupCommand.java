@@ -4,9 +4,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 public record MemberSignupCommand(
         String nickname,
-        String userId,
         String password,
-        MultipartFile imageUrl
+        MultipartFile imageUrl,
+        String userId
 ) {
 }
 

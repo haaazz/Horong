@@ -24,7 +24,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
         SELECT p
         FROM User p
-        WHERE p.userId = :email AND p.isDeleted = false
+        WHERE p.userId = :userId AND p.isDeleted = false
     """)
     Optional<User> findNotDeletedUserByUserId(@Param("userId") String userId);
 

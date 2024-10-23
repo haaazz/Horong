@@ -19,6 +19,8 @@ import ssafy.sera.common.properties.S3Properties;
 import java.io.IOException;
 import java.net.URL;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 @Slf4j
@@ -63,6 +65,32 @@ public class S3Util {
         } catch (IOException e) {
             throw new S3UploadFailedException();
         }
+    }
+
+    public List<String> uploardBoardImageToS3(MultipartFile[] images, Long postId) {
+        int count = 0;
+        String location = "Board/";
+        List<String> imageUrls = new ArrayList<>();
+        for (MultipartFile image : images) {
+                String originalFilename = image.getOriginalFilename();
+                String extension = "";
+
+                if (originalFilename != null && originalFilename.contains(".")) {
+                    extension = originalFilename.substring(originalFilename.lastIndexOf('.'));
+                }
+
+                validateFileExtension(extension);
+                String fileName = location + count+ "of" + postId + extension;
+                try {
+                    amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), fileName, image.getInputStream(), null));
+                    log.info("S3에 이미지 업로드 성공: {}", fileName);
+                    imageUrls.add(amazonS3Client.getUrl(s3Properties.s3().bucket(), fileName).toString());
+                } catch (IOException e) {
+                    log.error("S3 이미지 업로드 실패: {}", e.getMessage());
+                    throw new S3UploadFailedException();
+                }
+            }
+        return imageUrls;
     }
 
     public String getPresignedUrlFromS3(String imagePath) {

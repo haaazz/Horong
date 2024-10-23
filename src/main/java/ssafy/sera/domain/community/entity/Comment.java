@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import ssafy.sera.domain.member.entity.User;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
 @Entity
 @Getter
 @Setter
@@ -18,7 +21,7 @@ public class Comment {
 
     @ManyToOne
     @JoinColumn(name = "board_id")
-    private Board board;
+    private Post board;
 
     @Column(length = 50, nullable = false)
     private String content;
@@ -26,4 +29,11 @@ public class Comment {
     @ManyToOne
     @JoinColumn(name = "author_id")
     private User author;
+
+    private LocalDateTime createdDate;
+
+    @PrePersist
+    protected void onCreate() {
+        createdDate = LocalDateTime.now(); // 현재 시간으로 설정
+    }
 }

@@ -20,6 +20,6 @@ public record  LoginRequest(
         String password
 ) {
         public LoginCommand toCommand() {
-                return new LoginCommand(authcode, loginType, email, password);
+                return new LoginCommand(email, password);
         }
 }

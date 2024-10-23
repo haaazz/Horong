@@ -22,7 +22,7 @@ public enum UserErrorCode implements BaseErrorCode {
     VERIFICATION_FAILURE(NOT_FOUND, "USER_404_4", "인증에 실패하였습니다."),
     EMAIL_NOT_FOUND(NOT_FOUND, "USER_404_5", "존재하지 않는 이메일입니다."),
     PHONE_NUMBER_NOT_FOUND(NOT_FOUND, "USER_404_6", "존재하지 않는 전화번호입니다."),
-    KAKAO_MAIL_USER_NOT_FOUND(NOT_FOUND, "USER_404_&", "카카오 메일에 해당하는 회원을 찾을 수 없습니다."),
+    KAKAO_MAIL_USER_NOT_FOUND(NOT_FOUND, "USER_404_7", "카카오 메일에 해당하는 회원을 찾을 수 없습니다."),
     LOGIN_TYPE_NOT_SUPPORTED(NOT_FOUND, "USER_404_8", "지원하지 않는 로그인 타입입니다."),
 
     USER_ALREADY_DELETED(CONFLICT, "USER_409_1", "이미 삭제된 회원입니다."),
@@ -33,4 +33,9 @@ public enum UserErrorCode implements BaseErrorCode {
     private final Integer httpStatus;
     private final String code;
     private final String message;
+
+    @Override
+    public Integer getHttpStatus() {
+        return this.httpStatus;
+    }
 }

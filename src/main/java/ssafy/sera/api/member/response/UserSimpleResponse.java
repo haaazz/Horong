@@ -1,7 +1,6 @@
 package ssafy.sera.api.member.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import ssafy.sera.domain.member.common.Gender;
 import ssafy.sera.domain.member.entity.User;
 
 
@@ -13,9 +12,6 @@ public record UserSimpleResponse(
         @Schema(description = "유저 별명")
         String nickname,
 
-        @Schema(description = "유저 성별")
-        Gender gender,
-
         @Schema(description = "유저 프로필 이미지 presigned url")
         String image
 ) {
@@ -26,7 +22,6 @@ public record UserSimpleResponse(
         return new UserSimpleResponse(
                 user.getId(),
                 user.getNickname(),
-                user.getGender(),
                 image
         );
     }

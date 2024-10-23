@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.time.LocalDateTime;
+import org.joda.time.DateTime;
 import ssafy.sera.domain.member.entity.User;
 
 import java.util.List;
@@ -16,7 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Board {
+public class Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,10 +38,21 @@ public class Board {
     @Column(name = "image_url")
     private List<String> images;
 
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL)
     private List<Comment> comments;
 
     @ManyToOne
     @JoinColumn(name = "author_id")
     private User author;
+
+    private LocalDateTime createdDate;
+
+    public void updateImages(List<String> images) {
+        this.images = images;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        createdDate = LocalDateTime.now(); // 현재 시간으로 설정
+    }
 }
