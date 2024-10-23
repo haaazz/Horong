@@ -12,10 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ssafy.horong.api.CommonResponse;
-import ssafy.horong.api.community.request.CreateCommentRequest;
-import ssafy.horong.api.community.request.CreatePostRequest;
-import ssafy.horong.api.community.request.UpdateCommentRequest;
-import ssafy.horong.api.community.request.UpdatePostRequest;
+import ssafy.horong.api.community.request.*;
 import ssafy.horong.api.community.response.GetPostResponse;
 import ssafy.horong.domain.community.service.CommunityService;
 
@@ -97,5 +94,15 @@ public class CommunityController {
     public CommonResponse<Void> deleteComment(@PathVariable Long commentId) {
         communityService.deleteComment(commentId);
         return CommonResponse.ok("댓글이 삭제되었습니다.", null);
+    }
+
+    @PreAuthorize("hasRole('ROLE_USER')")
+    @Operation(summary = "게시글 검색", description = "게시글을 검색하는 API입니다.")
+    @GetMapping("/search/{keyword}")
+    public CommonResponse<Page<GetPostResponse>> searchPosts(@PathVariable String keyword, @PageableDefault(size = 10) Pageable pageable) {
+        log.info("[CommunityController] 게시글 검색 >>>> keyword: {}", keyword);
+        SearchPostsRequest request = new SearchPostsRequest(keyword);
+        Page<GetPostResponse> response = communityService.searchPosts(request.toCommand(), pageable);
+        return CommonResponse.ok(response);
     }
 }
