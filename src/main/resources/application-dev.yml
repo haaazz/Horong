@@ -7,7 +7,7 @@ spring:
     allow-circular-references: false
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     properties:
       hibernate:
         format_sql: true
