@@ -12,10 +12,7 @@ import ssafy.horong.api.community.response.GetCommentResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
 import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
-import ssafy.horong.domain.community.command.CreateCommentCommand;
-import ssafy.horong.domain.community.command.CreatePostCommand;
-import ssafy.horong.domain.community.command.UpdateCommentCommand;
-import ssafy.horong.domain.community.command.UpdatePostCommand;
+import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.entity.BoardType;
 import ssafy.horong.domain.community.entity.Post;
 import ssafy.horong.domain.community.entity.Comment;
@@ -175,5 +172,35 @@ public class CommunityServiceImpl implements CommunityService {
                 .orElseThrow(() -> new RuntimeException("로그인한 사용자가 존재하지 않습니다."));
         return userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자가 존재하지 않습니다."));
+    }
+
+    @Override
+    public Page<GetPostResponse> searchPosts(SearchPostsCommand command, Pageable pageable) {
+        log.info("게시글 검색: keyword={}, pageable={}", command.keyword(), pageable);
+        Page<Post> postPage = boardRepository.searchByKeyword(command.keyword(), pageable);
+
+        List<GetPostResponse> postResponses = postPage.map(post -> {
+            List<GetCommentResponse> commentResponses = post.getComments().stream().map(comment ->
+                    new GetCommentResponse(
+                            comment.getId(),
+                            comment.getContent(),
+                            comment.getAuthor().getNickname(),
+                            comment.getCreatedDate().toString()
+                    )
+            ).toList();
+
+            List<String> presignedUrls = post.getImages().stream().map(s3Util::getPresignedUrlFromS3).toList();
+
+            return new GetPostResponse(
+                    post.getId(),
+                    post.getTitle(),
+                    post.getContent(),
+                    post.getAuthor().getNickname(),
+                    presignedUrls,
+                    commentResponses
+            );
+        }).getContent();
+
+        return new PageImpl<>(postResponses, pageable, postPage.getTotalElements());
     }
 }
