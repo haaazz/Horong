@@ -32,18 +32,12 @@ public class CurrencyExchange {
     @Column(name = "phone", nullable = false, length = 14)
     private String phone;  // 전화번호 (크롤링된 데이터 그대로 사용)
 
+    @Column(name = "latitude", nullable = false)
+    private Double latitude;  // 위도
+
+    @Column(name = "longitude", nullable = false)
+    private Double longitude;  // 경도
+
     @OneToMany(mappedBy = "currencyExchange", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExchangeRate> exchangeRates;  // 연관된 환율 정보
-
-    public void updateDetails(String address, String businessHours, String description, String phone) {
-        this.address = address;
-        this.businessHours = businessHours;
-        this.description = description;
-        this.phone = phone;
-    }
-
-    @PrePersist
-    public void prePersist() {
-        // 추가적인 기본값 설정이 필요한 경우 작성
-    }
 }

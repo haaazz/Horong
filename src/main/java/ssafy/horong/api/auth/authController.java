@@ -1,6 +1,7 @@
 package ssafy.horong.api.auth;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import ssafy.horong.domain.auth.service.AuthService;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/auth")
+@Tag(name = "Auth", description = "인증")
 public class authController {
 
     private final AuthService authService;
