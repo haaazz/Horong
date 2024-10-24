@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.domain.community.command.CreatePostCommand;
+import ssafy.horong.domain.community.entity.BoardType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +35,7 @@ public record CreatePostRequest(
         MultipartFile image5,
 
         @Schema(description = "게시판 타입", example = "free")
-        String boardType
+        BoardType boardType
 ) {
         public CreatePostCommand toCommand() {
                 // null이 아닌 파일만 리스트에 추가

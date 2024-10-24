@@ -8,6 +8,7 @@ import ssafy.horong.domain.member.command.MemberSignupCommand;
 import ssafy.horong.domain.member.common.Language;
 import ssafy.horong.domain.member.common.MemberRole;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -40,6 +41,13 @@ public class User {
 
     @Column(nullable = false)
     private boolean isDeleted;
+
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+
+    private LocalDateTime deletedAt;
 
     @Enumerated(EnumType.STRING)
     private MemberRole role;

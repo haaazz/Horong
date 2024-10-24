@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import ssafy.horong.api.community.response.GetCommentResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
+import ssafy.horong.common.exception.Board.NotAdminExeption;
+import ssafy.horong.common.exception.Board.NotAuthenticatedException;
 import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.community.command.*;
@@ -21,6 +23,7 @@ import ssafy.horong.domain.community.entity.Comment;
 import ssafy.horong.domain.community.repository.BoardRepository;
 import ssafy.horong.domain.community.repository.CommentRepository;
 import ssafy.horong.domain.community.repository.MessageRepository;
+import ssafy.horong.domain.member.common.MemberRole;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 
@@ -43,34 +46,54 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public void createPost(CreatePostCommand command) {
+        if (command.boardType() == BoardType.NOTICE && SecurityUtil.getLoginMemberRole().orElse(MemberRole.USER) != MemberRole.ADMIN) {
+            throw new NotAdminExeption();
+        }
 
         Post post = Post.builder()
                 .author(getCurrentUser())
                 .title(command.title())
                 .content(command.content())
-                .type(BoardType.valueOf(command.boardType().toUpperCase()))
+                .type(command.boardType())
                 .build();
+
         post.updateImages(s3Util.uploardBoardImageToS3(command.images(), post.getId()));
+
         boardRepository.save(post);
     }
 
     @Override
     @Transactional
     public void updatePost(UpdatePostCommand command) {
-        Post existingBoard = boardRepository.findById(command.postId())
+        Post post = boardRepository.findById(command.postId())
                 .orElseThrow(() -> new RuntimeException("게시글이 존재하지 않습니다."));
 
-        existingBoard.setTitle(command.title());
-        existingBoard.setContent(command.title());
+        if (post.getAuthor() == getCurrentUser() || SecurityUtil.getLoginMemberRole().orElse(MemberRole.USER) == MemberRole.ADMIN) {
+            throw new NotAuthenticatedException();
+        }
 
-        boardRepository.save(existingBoard);
+        post.setTitle(command.title());
+        post.setContent(command.content());
+
+        post.setUpdatedDate(LocalDateTime.now());
+
+        boardRepository.save(post);
     }
 
     @Override
     @Transactional
     public void deletePost(Long id) {
+        Post post = boardRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("게시글이 존재하지 않습니다."));
+
+        if (post.getAuthor() == getCurrentUser() || SecurityUtil.getLoginMemberRole().orElse(MemberRole.USER) == MemberRole.ADMIN) {
+            throw new NotAuthenticatedException();
+        }
+
+        post.setDeletedDate(LocalDateTime.now());
+
         log.info("게시글 삭제: {}", id);
-        boardRepository.deleteById(id);
+        boardRepository.save(post);
     }
 
     @Override
@@ -156,8 +179,18 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public void deleteComment(Long commentId) {
+
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("댓글이 존재하지 않습니다."));
+
+        if (comment.getAuthor() == getCurrentUser() || SecurityUtil.getLoginMemberRole().orElse(MemberRole.USER) == MemberRole.ADMIN) {
+            throw new NotAuthenticatedException();
+        }
+
+        comment.setDeletedDate(LocalDateTime.now());
+
         log.info("댓글 삭제: {}", commentId);
-        commentRepository.deleteById(commentId);
+        commentRepository.save(comment);
     }
 
     @Override
@@ -165,6 +198,12 @@ public class CommunityServiceImpl implements CommunityService {
     public void updateComment(UpdateCommentCommand command) {
         Comment existingComment = commentRepository.findById(command.commentId())
                 .orElseThrow(() -> new RuntimeException("댓글이 존재하지 않습니다."));
+
+        if (existingComment.getAuthor() == getCurrentUser() || SecurityUtil.getLoginMemberRole().orElse(MemberRole.USER) == MemberRole.ADMIN) {
+            throw new NotAuthenticatedException();
+        }
+
+        existingComment.setUpdatedDate(LocalDateTime.now());
 
         existingComment.setContent(command.content());
         commentRepository.save(existingComment);
@@ -220,14 +259,14 @@ public class CommunityServiceImpl implements CommunityService {
                 .content(command.content())        // 메시지 내용
                 .image(imageUrl)                      // 업로드된 이미지 URL
                 .sender(getCurrentUser())             // 현재 로그인된 유저를 발신자로 설정
-                .recipient(userRepository.findByNickname(to)) // 수신자 설정 (DB에서 조회)
+                .receiver(userRepository.findByNickname(to)) // 수신자 설정 (DB에서 조회)
                 .createdAt(LocalDateTime.now())       // 생성 시간 설정
                 .build());
     }
 
     @Override
     public List<GetMessageListResponse> getMessageList(GetMessageListCommand command) {
-        List<Message> messages = messageRepository.findBySenderIdAndRecipient(command.senderId(), getCurrentUser().getId());
+        List<Message> messages = messageRepository.findBySenderIdAndreceiver(command.senderId(), getCurrentUser().getId());
         List<GetMessageListResponse> messageResponses = new ArrayList<>();
 
         for (Message message : messages) {

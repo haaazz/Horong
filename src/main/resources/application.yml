@@ -8,7 +8,7 @@ kakao:
 
 spring:
   application:
-    name: ddada
+    name: horong
   mail:
     host: ${GMAIL_HOST}
     port: ${GMAIL_PORT}

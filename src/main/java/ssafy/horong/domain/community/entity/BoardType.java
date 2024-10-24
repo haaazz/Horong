@@ -12,5 +12,5 @@ public enum BoardType {
     GANGWON,
     JEJU,
     CHUNGNAM,
-    CHUNGBUG,
+    CHUNGBUG
 }

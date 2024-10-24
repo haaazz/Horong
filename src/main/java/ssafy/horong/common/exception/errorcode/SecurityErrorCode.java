@@ -9,6 +9,7 @@ import static ssafy.horong.api.StatusCode.*;
 @AllArgsConstructor
 public enum SecurityErrorCode implements BaseErrorCode {
     INVALID_PASSWORD(BAD_REQUEST, "SECURITY_400_1", "비밀번호 생성 규칙에 맞치 않습니다."),
+    ALDREADY_USED_PASSWORD(BAD_REQUEST, "SECURITY_400_2", "이전에 사용한 비밀번호는 사용할 수 없습니다."),
 
     INVALID_TOKEN(UNAUTHORIZED, "TOKEN_401_1", "토큰이 유효하지않습니다."),
     INVALID_SIGNATURE_TOKEN(UNAUTHORIZED, "TOKEN_401_2", "토큰의 Signature가 일치하지 않습니다."),

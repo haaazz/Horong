@@ -3,6 +3,11 @@ package ssafy.horong.domain.auth.service;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,12 +20,16 @@ import ssafy.horong.common.util.JwtProcessor;
 import ssafy.horong.domain.auth.command.LoginCommand;
 import ssafy.horong.domain.auth.model.DecodedJwtToken;
 import ssafy.horong.domain.auth.model.LoginToken;
+import ssafy.horong.domain.member.common.CustomUserDetails;
+import ssafy.horong.domain.member.common.MemberRole;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 import ssafy.horong.common.exception.User.*;
 
 import ssafy.horong.common.exception.security.*;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Optional;
 
 import static ssafy.horong.common.constant.redis.KEY_PREFIX.REFRESH_TOKEN;
@@ -49,6 +58,33 @@ public class AuthServiceImpl implements AuthService {
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new PasswordNotMatchException();
         }
+
+        Authentication newAuthentication = SecurityContextHolder.getContext().getAuthentication(); // 기본값으로 초기화
+
+
+        if (user.getRole() == MemberRole.ADMIN) {
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            // 기존 권한을 가져옴
+            Collection<GrantedAuthority> currentAuthorities = new ArrayList<>(authentication.getAuthorities());
+
+            // 새로운 권한 추가
+            currentAuthorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+
+            // 새로운 Authentication 객체 생성 (기존 인증 정보 사용)
+            newAuthentication = new UsernamePasswordAuthenticationToken(
+                    authentication.getPrincipal(),
+                    authentication.getCredentials(),
+                    currentAuthorities
+            );
+
+            // 새로운 Authentication 객체를 SecurityContext에 설정
+            SecurityContextHolder.getContext().setAuthentication(newAuthentication);
+        }
+
+        log.info("권한 확인 {}", newAuthentication);
+
 
         tokens = generateTokens(user);
         jwtProcessor.saveRefreshToken(tokens);
@@ -96,6 +132,7 @@ public class AuthServiceImpl implements AuthService {
 
     private LoginToken generateTokens(User member) {
         String accessToken = jwtProcessor.generateAccessToken(member);
+
         String refreshToken = jwtProcessor.generateRefreshToken(member);
         return new LoginToken(accessToken, refreshToken);
     }
