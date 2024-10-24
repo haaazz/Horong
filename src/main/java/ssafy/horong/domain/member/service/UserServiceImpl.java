@@ -60,7 +60,7 @@ public class UserServiceImpl implements UserService {
         String imageUrl = handleProfileImage(imageFile, userToSave.getId(), userToSave.getProfileImg());
 
         String encodedPassword = passwordEncoder.encode(signupCommand.password());
-        userToSave.signupMember(signupCommand, imageUrl, encodedPassword);
+        userToSave.signupMember(signupCommand, imageUrl, encodedPassword, signupCommand.language());
         userRepository.save(userToSave);
 
         try {
@@ -175,7 +175,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private String handleProfileImage(MultipartFile imageFile, Long userId, String existingImageUrl) {
-        return s3Util.uploadImageToS3(imageFile, userId, "profileImg/", existingImageUrl);
+        return s3Util.uploadUserImageToS3(imageFile, userId, "profileImg/", existingImageUrl);
     }
 
     private String generatePreSignedUrl(String imageUrl) {

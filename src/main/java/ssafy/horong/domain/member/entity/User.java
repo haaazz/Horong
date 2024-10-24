@@ -28,7 +28,7 @@ public class User {
     @Column(nullable = false, length = 10)
     private String nickname;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 66)
     private String password; // 비밀번호는 8~20자까지 설정 가능
 
     @Column(length = 100)
@@ -61,13 +61,14 @@ public class User {
         this.role = role;
     }
 
-    public void signupMember(MemberSignupCommand signupCommand, String imageUrl, String password) {
+    public void signupMember(MemberSignupCommand signupCommand, String imageUrl, String password, Language language) {
         this.password = password;
         this.nickname = signupCommand.nickname();
         this.userId = signupCommand.userId();
         this.profileImg = imageUrl;
         this.isDeleted = false;
         this.role = MemberRole.USER;
+        this.language = language;
     }
 
     public void updateProfile(String nickname, String profileImagePath) {

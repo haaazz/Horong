@@ -2,9 +2,9 @@ package ssafy.horong.domain.community.command;
 
 import org.springframework.web.multipart.MultipartFile;
 
-public record CreatePostCommand(
-        String title,
+public record SendMessageCommand(
+        String receiverNickname,
         String content,
-        MultipartFile[] images,
-        String boardType
-) {}
+        MultipartFile image
+) {
+}

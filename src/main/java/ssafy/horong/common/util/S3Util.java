@@ -40,7 +40,7 @@ public class S3Util {
         }
     }
 
-    private static String getS3FileName(MultipartFile image, Long memberId, String location) {
+    private static String getS3FileName(MultipartFile image, String text, String location) {
         String originalFilename = image.getOriginalFilename();
         String extension = "";
 
@@ -50,16 +50,27 @@ public class S3Util {
 
         validateFileExtension(extension);
 
-        return location + memberId + extension;
+        return location + text + extension;
     }
 
-    public String uploadImageToS3(MultipartFile imageFile, Long userId, String location, String existingImageUrl) {
+    public String uploadImageToS3(MultipartFile imageFile, String text, String location) {
+
+        try {
+            String fileName = getS3FileName(imageFile, text, location);
+            amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), fileName, imageFile.getInputStream(), null));
+            return amazonS3Client.getUrl(s3Properties.s3().bucket(), fileName).toString();
+        } catch (IOException e) {
+            throw new S3UploadFailedException();
+        }
+    }
+
+    public String uploadUserImageToS3(MultipartFile imageFile, Long userId, String location, String existingImageUrl) {
         if (imageFile == null || imageFile.isEmpty()) {
             return existingImageUrl != null && !existingImageUrl.isEmpty() ? existingImageUrl : S3_IMAGE.DEFAULT_URL;
         }
 
         try {
-            String fileName = getS3FileName(imageFile, userId, location);
+            String fileName = getS3FileName(imageFile, userId.toString(), location);
             amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), fileName, imageFile.getInputStream(), null));
             return amazonS3Client.getUrl(s3Properties.s3().bucket(), fileName).toString();
         } catch (IOException e) {
