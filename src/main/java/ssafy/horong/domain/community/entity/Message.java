@@ -29,8 +29,8 @@ public class Message {
     private User sender;
 
     @ManyToOne
-    @JoinColumn(name = "recipient_id", nullable = false)
-    private User recipient;
+    @JoinColumn(name = "receiver_id", nullable = false)
+    private User receiver;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

@@ -251,14 +251,14 @@ public class CommunityServiceImpl implements CommunityService {
                 .content(command.content())        // 메시지 내용
                 .image(imageUrl)                      // 업로드된 이미지 URL
                 .sender(getCurrentUser())             // 현재 로그인된 유저를 발신자로 설정
-                .recipient(userRepository.findByNickname(to)) // 수신자 설정 (DB에서 조회)
+                .receiver(userRepository.findByNickname(to)) // 수신자 설정 (DB에서 조회)
                 .createdAt(LocalDateTime.now())       // 생성 시간 설정
                 .build());
     }
 
     @Override
     public List<GetMessageListResponse> getMessageList(GetMessageListCommand command) {
-        List<Message> messages = messageRepository.findBySenderIdAndRecipient(command.senderId(), getCurrentUser().getId());
+        List<Message> messages = messageRepository.findBySenderIdAndreceiver(command.senderId(), getCurrentUser().getId());
         List<GetMessageListResponse> messageResponses = new ArrayList<>();
 
         for (Message message : messages) {
