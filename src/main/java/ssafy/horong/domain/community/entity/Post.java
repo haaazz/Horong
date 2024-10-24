@@ -47,6 +47,10 @@ public class Post {
 
     private LocalDateTime createdDate;
 
+    private LocalDateTime updatedDate;
+
+    private LocalDateTime deletedDate;
+
     public void updateImages(List<String> images) {
         this.images = images;
     }

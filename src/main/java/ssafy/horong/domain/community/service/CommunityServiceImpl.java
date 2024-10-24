@@ -75,6 +75,8 @@ public class CommunityServiceImpl implements CommunityService {
         post.setTitle(command.title());
         post.setContent(command.content());
 
+        post.setUpdatedDate(LocalDateTime.now());
+
         boardRepository.save(post);
     }
 
@@ -88,8 +90,10 @@ public class CommunityServiceImpl implements CommunityService {
             throw new NotAuthenticatedException();
         }
 
+        post.setDeletedDate(LocalDateTime.now());
+
         log.info("게시글 삭제: {}", id);
-        boardRepository.deleteById(id);
+        boardRepository.save(post);
     }
 
     @Override
@@ -183,8 +187,10 @@ public class CommunityServiceImpl implements CommunityService {
             throw new NotAuthenticatedException();
         }
 
+        comment.setDeletedDate(LocalDateTime.now());
+
         log.info("댓글 삭제: {}", commentId);
-        commentRepository.deleteById(commentId);
+        commentRepository.save(comment);
     }
 
     @Override
@@ -196,6 +202,8 @@ public class CommunityServiceImpl implements CommunityService {
         if (existingComment.getAuthor() == getCurrentUser() || SecurityUtil.getLoginMemberRole().orElse(MemberRole.USER) == MemberRole.ADMIN) {
             throw new NotAuthenticatedException();
         }
+
+        existingComment.setUpdatedDate(LocalDateTime.now());
 
         existingComment.setContent(command.content());
         commentRepository.save(existingComment);

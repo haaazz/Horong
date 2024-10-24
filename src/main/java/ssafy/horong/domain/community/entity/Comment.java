@@ -29,7 +29,12 @@ public class Comment {
     @JoinColumn(name = "author_id")
     private User author;
 
+    @Column(nullable = false)
     private LocalDateTime createdDate;
+
+    private LocalDateTime updatedDate;
+
+    private LocalDateTime deletedDate;
 
     @PrePersist
     protected void onCreate() {
