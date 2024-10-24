@@ -54,11 +54,10 @@ public class S3Util {
     }
 
     public String uploadImageToS3(MultipartFile imageFile, String text, String location) {
-
         try {
             String fileName = getS3FileName(imageFile, text, location);
             amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), fileName, imageFile.getInputStream(), null));
-            return amazonS3Client.getUrl(s3Properties.s3().bucket(), fileName).toString();
+            return fileName; // 객체 키만 반환
         } catch (IOException e) {
             throw new S3UploadFailedException();
         }
@@ -72,7 +71,7 @@ public class S3Util {
         try {
             String fileName = getS3FileName(imageFile, userId.toString(), location);
             amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), fileName, imageFile.getInputStream(), null));
-            return amazonS3Client.getUrl(s3Properties.s3().bucket(), fileName).toString();
+            return fileName; // 객체 키만 반환
         } catch (IOException e) {
             throw new S3UploadFailedException();
         }
@@ -83,24 +82,24 @@ public class S3Util {
         String location = "Board/";
         List<String> imageUrls = new ArrayList<>();
         for (MultipartFile image : images) {
-                String originalFilename = image.getOriginalFilename();
-                String extension = "";
+            String originalFilename = image.getOriginalFilename();
+            String extension = "";
 
-                if (originalFilename != null && originalFilename.contains(".")) {
-                    extension = originalFilename.substring(originalFilename.lastIndexOf('.'));
-                }
-
-                validateFileExtension(extension);
-                String fileName = location + count+ "of" + postId + extension;
-                try {
-                    amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), fileName, image.getInputStream(), null));
-                    log.info("S3에 이미지 업로드 성공: {}", fileName);
-                    imageUrls.add(amazonS3Client.getUrl(s3Properties.s3().bucket(), fileName).toString());
-                } catch (IOException e) {
-                    log.error("S3 이미지 업로드 실패: {}", e.getMessage());
-                    throw new S3UploadFailedException();
-                }
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf('.'));
             }
+
+            validateFileExtension(extension);
+            String fileName = location + count+ "of" + postId + extension;
+            try {
+                amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), fileName, image.getInputStream(), null));
+                log.info("S3에 이미지 업로드 성공: {}", fileName);
+                imageUrls.add(fileName); // 객체 키만 저장
+            } catch (IOException e) {
+                log.error("S3 이미지 업로드 실패: {}", e.getMessage());
+                throw new S3UploadFailedException();
+            }
+        }
         return imageUrls;
     }
 
@@ -124,6 +123,11 @@ public class S3Util {
 
     private String extractObjectKey(String imagePath) {
         return imagePath.replace("https://sera-image.s3.ap-northeast-2.amazonaws.com/", "");
+    }
+
+    public String getFullS3ImageUrl(String objectKey) {
+        // 객체 키에 S3 URL을 붙여서 반환
+        return "https://sera-image.s3.ap-northeast-2.amazonaws.com/" + objectKey;
     }
 
     private GetObjectRequest createGetObjectRequest(String objectKey) {

@@ -69,11 +69,10 @@ public class User {
         this.role = role;
     }
 
-    public void signupMember(MemberSignupCommand signupCommand, String imageUrl, String password, Language language) {
+    public void signupMember(MemberSignupCommand signupCommand,  String password, Language language) {
         this.password = password;
         this.nickname = signupCommand.nickname();
         this.userId = signupCommand.userId();
-        this.profileImg = imageUrl;
         this.isDeleted = false;
         this.role = MemberRole.USER;
         this.language = language;

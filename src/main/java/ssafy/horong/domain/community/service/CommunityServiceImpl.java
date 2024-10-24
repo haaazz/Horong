@@ -56,9 +56,8 @@ public class CommunityServiceImpl implements CommunityService {
                 .content(command.content())
                 .type(command.boardType())
                 .build();
-
+        boardRepository.save(post);
         post.updateImages(s3Util.uploardBoardImageToS3(command.images(), post.getId()));
-
         boardRepository.save(post);
     }
 
