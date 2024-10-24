@@ -12,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,19 +38,21 @@ public class CommunityController {
     private final CommunityService communityService;
     private final S3Util s3Util;
 
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 생성", description = """
-            게시글을 작성하는 API입니다.
-            최대 5개의 이미지 파일을 업로드할 수 있으며, 게시판 타입과 함께 게시글을 생성합니다.
-    """)
+        게시글을 작성하는 API입니다.
+        최대 5개의 이미지 파일을 업로드할 수 있으며, 게시판 타입과 함께 게시글을 생성합니다.
+""")
     @PostMapping(value = "/createPost", consumes = { "multipart/form-data" })
     public CommonResponse<?> createPost(@ModelAttribute @Validated CreatePostRequest request) {
+        log.info("권한정보 {}", SecurityContextHolder.getContext().getAuthentication());
         log.info("[CommunityController] 게시글 생성 >>>> request: {}", request);
         communityService.createPost(request.toCommand());
         return CommonResponse.ok("게시글이 생성되었습니다.", null);
     }
 
-    @PreAuthorize("hasRole('ROLE_USER')")
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 수정", description = "게시글을 수정하는 API입니다.")
     @PatchMapping(value = "/{postId}")
     public CommonResponse<Void> updatePost(@PathVariable Long postId, @ModelAttribute @Validated UpdatePostRequest request) {
@@ -58,7 +62,7 @@ public class CommunityController {
         return CommonResponse.ok("게시글이 수정되었습니다.", null);
     }
 
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 삭제", description = "게시글을 삭제하는 API입니다.")
     @DeleteMapping("/{postId}")
     public CommonResponse<Void> deletePost(@PathVariable Long postId) {
@@ -67,7 +71,7 @@ public class CommunityController {
         return CommonResponse.ok("게시글이 삭제되었습니다.", null);
     }
 
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 조회", description = "게시글을 조회하는 API입니다.")
     @GetMapping("/{postId}")
     public CommonResponse<GetPostResponse> getPost(@PathVariable Long postId) {
@@ -85,7 +89,7 @@ public class CommunityController {
         return CommonResponse.ok(response);
     }
 
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "댓글 생성", description = "댓글을 생성하는 API입니다.")
     @PostMapping(value = "{postId}/")
     public CommonResponse<Void> createComment(@PathVariable Long postId, @RequestBody @Validated CreateCommentRequest request) {
@@ -94,7 +98,7 @@ public class CommunityController {
         return CommonResponse.ok("댓글이 생성되었습니다.", null);
     }
 
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "댓글 수정", description = "댓글을 수정하는 API입니다.")
     @PatchMapping(value = "{postId}/{commentId}")
     public CommonResponse<Void> updateComment(@PathVariable Long postId, @PathVariable Long commentId, @RequestBody @Validated UpdateCommentRequest request) {
@@ -103,7 +107,7 @@ public class CommunityController {
         return CommonResponse.ok("댓글이 수정되었습니다.", null);
     }
 
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "댓글 삭제", description = "댓글을 삭제하는 API입니다.")
     @DeleteMapping("{postId}/{commentId}")
     public CommonResponse<Void> deleteComment(@PathVariable Long commentId) {
@@ -111,7 +115,7 @@ public class CommunityController {
         return CommonResponse.ok("댓글이 삭제되었습니다.", null);
     }
 
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 검색", description = "게시글을 검색하는 API입니다.")
     @GetMapping("/search/{keyword}")
     public CommonResponse<Page<GetPostResponse>> searchPosts(
@@ -123,7 +127,7 @@ public class CommunityController {
         return CommonResponse.ok(response);
     }
 
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "메시지 전송", description = "메시지를 전송하는 API입니다.")
     @PostMapping(value = "/sendMessage", consumes = { "multipart/form-data" })
     public CommonResponse<Void> sendMessage(@ModelAttribute @Validated SendMessageRequest request) {
@@ -132,7 +136,7 @@ public class CommunityController {
         return CommonResponse.ok("메시지가 전송되었습니다.", null);
     }
 
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "메시지 리스트 조회", description = "메시지 리스트를 조회하는 API입니다.")
     @GetMapping("/messageList/{senderId}")
     public CommonResponse<List<GetMessageListResponse>> getMessageList(@PathVariable Long senderId) {

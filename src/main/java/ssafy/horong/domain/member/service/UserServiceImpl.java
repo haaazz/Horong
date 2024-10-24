@@ -62,6 +62,11 @@ public class UserServiceImpl implements UserService {
         String encodedPassword = passwordEncoder.encode(signupCommand.password());
         userToSave.signupMember(signupCommand, imageUrl, encodedPassword, signupCommand.language());
         userRepository.save(userToSave);
+        passwordHistoryRepository.save(PasswordHistory.builder()
+                .user(userToSave)
+                .password(encodedPassword)
+                .changedAt(LocalDateTime.now())
+                .build());
 
         try {
             String accessToken = jwtProcessor.generateAccessToken(userToSave);
@@ -107,7 +112,7 @@ public class UserServiceImpl implements UserService {
         String imageUrl = S3_IMAGE.DEFAULT_URL;
         if (!command.deleteImage()) {
             imageUrl = handleProfileImage(profileImageFile, currentUser.getId(), currentUser.getProfileImg());
-        }// MultipartFile로 변경
+        }// MultipartFile로 변경`
         String preSignedUrl = generatePreSignedUrl(imageUrl);
 
         String updatedNickname = getUpdatedField(command.nickname(), currentUser.getNickname());
