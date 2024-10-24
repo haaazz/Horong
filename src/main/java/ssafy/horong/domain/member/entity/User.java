@@ -98,5 +98,6 @@ public class User {
         if (profileImg == null) {
             profileImg = S3_IMAGE.DEFAULT_URL;
         }
+        createdAt = LocalDateTime.now();
     }
 }

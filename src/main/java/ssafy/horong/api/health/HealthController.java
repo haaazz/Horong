@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.api.CommonResponse;
@@ -59,8 +60,10 @@ public class HealthController {
 
     @Operation(summary = "이미지 전송 확인", description = "이미지 전송이 정상적으로 동작하는지 확인합니다.")
     @PostMapping(value = "/image", consumes = { "multipart/form-data" })
-    public CommonResponse<String> checkImageTransfer(@ModelAttribute MultipartFile image) {
-        String imageUrl= s3Util.uploadImageToS3(image, "test", "test");
+    public CommonResponse<String> checkImageTransfer(@ModelAttribute @Validated TestRequest request) {
+
+        log.info("health{}", request.image());
+        String imageUrl= s3Util.uploadImageToS3(request.image(), "test", "test");
         return CommonResponse.ok(s3Util.getPresignedUrlFromS3(imageUrl));
     }
 
