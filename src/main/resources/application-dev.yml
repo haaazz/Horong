@@ -21,7 +21,7 @@ logging:
       springframework:
         web: debug
     ssafy:
-      ddada: debug
+      horong: debug
 
 springdoc:
   default-consumes-media-type: application/json;charset=UTF-8
