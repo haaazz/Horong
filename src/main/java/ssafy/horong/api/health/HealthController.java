@@ -43,17 +43,17 @@ public class HealthController {
         }
     }
 
-    @Operation(summary = "PostgreSQL 연결 확인", description = "PostgreSQL 데이터베이스와의 연결 상태를 확인합니다.")
-    @GetMapping("/postgres/check")
-    public CommonResponse<String> checkPostgresConnection() {
-        log.info("[HealthController] Postgres 연결 확인");
+    @Operation(summary = "mysql 연결 확인", description = "mysql 데이터베이스와의 연결 상태를 확인합니다.")
+    @GetMapping("/mysql/check")
+    public CommonResponse<String> checkmysqlConnection() {
+        log.info("[HealthController] mysql 연결 확인");
         try (Connection connection = dataSource.getConnection()) {
             if (!connection.isValid(2)) {  // 2초 내에 연결 확인
-                return CommonResponse.ok("PostgreSQL 연결 실패", null);
+                return CommonResponse.ok("mysql 연결 실패", null);
             }
-            return CommonResponse.ok("PostgreSQL 연결 성공", null);
+            return CommonResponse.ok("mysql 연결 성공", null);
         } catch (Exception e) {
-            log.error("PostgreSQL 연결 오류 발생", e);
+            log.error("mysql 연결 오류 발생", e);
             return CommonResponse.internalServerError(GlobalErrorCode.SERVER_ERROR);
         }
     }

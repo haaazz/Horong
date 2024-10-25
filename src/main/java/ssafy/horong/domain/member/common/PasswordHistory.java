@@ -29,10 +29,14 @@ public class PasswordHistory {
 
     @CreatedDate
     @Column(updatable = false, nullable = false)
-    private LocalDateTime changedAt;
+    private LocalDateTime updatedAt;
 
     public void PasswordHistory(User user, String password) {
         this.user = user;
         this.password = password;
+    }
+    @PrePersist
+    public void prePersist() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

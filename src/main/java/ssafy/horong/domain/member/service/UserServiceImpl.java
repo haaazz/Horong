@@ -64,7 +64,6 @@ public class UserServiceImpl implements UserService {
         passwordHistoryRepository.save(PasswordHistory.builder()
                 .user(userToSave)
                 .password(encodedPassword)
-                .changedAt(LocalDateTime.now())
                 .build());
 
         try {
@@ -158,7 +157,6 @@ public class UserServiceImpl implements UserService {
         PasswordHistory passwordHistory = PasswordHistory.builder()
                 .user(user)
                 .password(encodedNewPassword)
-                .changedAt(LocalDateTime.now())
                 .build();
 
         passwordHistoryRepository.save(passwordHistory);
@@ -228,15 +226,16 @@ public class UserServiceImpl implements UserService {
     }
 
     private void verifyNewPassword(String newPassword, User user) {
-        if (newPassword.length() < 8 || !newPassword.matches(".*[!@#\\$%^&*].*")) {
+        if (newPassword.length() < 8 || !newPassword.matches(".*[!@#$%^&*].*")) {
             throw new InvalidPasswordException();
         }
 
         for (PasswordHistory history : passwordHistoryRepository.getHistoriesByUserId(user.getId())) {
-            if (passwordEncoder.matches(newPassword, history.getPassword())) {
+            if (passwordEncoder.matches(newPassword, history.getPassword()) && history.getUpdatedAt().isAfter(LocalDateTime.now().minusMonths(6))) {
                 throw new PasswordUsedException();
             }
         }
+
     }
 
     public UserIdResponse getMemberId() {
