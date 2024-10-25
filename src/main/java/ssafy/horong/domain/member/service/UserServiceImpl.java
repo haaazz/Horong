@@ -48,24 +48,22 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserSignupResponse signupMember(MemberSignupCommand signupCommand) {
         log.info("[UserService] 유저 회원가입");
-        User existingUser = userRepository.findByUserId(signupCommand.userId())
-                .orElse(null);
 
-        if (isDuplicateUserId(existingUser)) {
+        if (isDuplicateUserId(signupCommand.userId())) {
             throw new UserIdDuplicateException();
         }
 
-        User userToSave = existingUser != null ? existingUser : createNewUser(signupCommand);
+        User userToSave = createNewUser(signupCommand);
+        String encodedPassword = passwordEncoder.encode(signupCommand.password());
+        userToSave.signupMember(signupCommand,encodedPassword, signupCommand.language());
+        userRepository.save(userToSave);
         MultipartFile imageFile = signupCommand.imageUrl();
         String imageUrl = handleProfileImage(imageFile, userToSave.getId(), userToSave.getProfileImg());
-
-        String encodedPassword = passwordEncoder.encode(signupCommand.password());
-        userToSave.signupMember(signupCommand, imageUrl, encodedPassword, signupCommand.language());
+        userToSave.setProfileImg(imageUrl);
         userRepository.save(userToSave);
         passwordHistoryRepository.save(PasswordHistory.builder()
                 .user(userToSave)
                 .password(encodedPassword)
-                .changedAt(LocalDateTime.now())
                 .build());
 
         try {
@@ -159,7 +157,6 @@ public class UserServiceImpl implements UserService {
         PasswordHistory passwordHistory = PasswordHistory.builder()
                 .user(user)
                 .password(encodedNewPassword)
-                .changedAt(LocalDateTime.now())
                 .build();
 
         passwordHistoryRepository.save(passwordHistory);
@@ -167,10 +164,13 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+    private boolean isDuplicateUserId(String userId) {
+        User user = userRepository.findByUserId(userId)
+                .orElse(null);
 
-    private boolean isDuplicateUserId(User existingUser) {
-        return existingUser != null && !existingUser.isDeleted();
+        return user != null && !user.isDeleted();
     }
+
 
     private User createNewUser(MemberSignupCommand command) {
         return User.builder()
@@ -226,15 +226,16 @@ public class UserServiceImpl implements UserService {
     }
 
     private void verifyNewPassword(String newPassword, User user) {
-        if (newPassword.length() < 8 || !newPassword.matches(".*[!@#\\$%^&*].*")) {
+        if (newPassword.length() < 8 || !newPassword.matches(".*[!@#$%^&*].*")) {
             throw new InvalidPasswordException();
         }
 
         for (PasswordHistory history : passwordHistoryRepository.getHistoriesByUserId(user.getId())) {
-            if (passwordEncoder.matches(newPassword, history.getPassword())) {
+            if (passwordEncoder.matches(newPassword, history.getPassword()) && history.getUpdatedAt().isAfter(LocalDateTime.now().minusMonths(6))) {
                 throw new PasswordUsedException();
             }
         }
+
     }
 
     public UserIdResponse getMemberId() {

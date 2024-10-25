@@ -65,6 +65,10 @@ dependencies {
     implementation group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.12.287'
     implementation 'software.amazon.awssdk:s3:2.20.0'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
+    // monitoring
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 }
 
 dependencyManagement {

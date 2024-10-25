@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.api.CommonResponse;
@@ -42,25 +43,27 @@ public class HealthController {
         }
     }
 
-    @Operation(summary = "PostgreSQL 연결 확인", description = "PostgreSQL 데이터베이스와의 연결 상태를 확인합니다.")
-    @GetMapping("/postgres/check")
-    public CommonResponse<String> checkPostgresConnection() {
-        log.info("[HealthController] Postgres 연결 확인");
+    @Operation(summary = "mysql 연결 확인", description = "mysql 데이터베이스와의 연결 상태를 확인합니다.")
+    @GetMapping("/mysql/check")
+    public CommonResponse<String> checkmysqlConnection() {
+        log.info("[HealthController] mysql 연결 확인");
         try (Connection connection = dataSource.getConnection()) {
             if (!connection.isValid(2)) {  // 2초 내에 연결 확인
-                return CommonResponse.ok("PostgreSQL 연결 실패", null);
+                return CommonResponse.ok("mysql 연결 실패", null);
             }
-            return CommonResponse.ok("PostgreSQL 연결 성공", null);
+            return CommonResponse.ok("mysql 연결 성공", null);
         } catch (Exception e) {
-            log.error("PostgreSQL 연결 오류 발생", e);
+            log.error("mysql 연결 오류 발생", e);
             return CommonResponse.internalServerError(GlobalErrorCode.SERVER_ERROR);
         }
     }
 
     @Operation(summary = "이미지 전송 확인", description = "이미지 전송이 정상적으로 동작하는지 확인합니다.")
     @PostMapping(value = "/image", consumes = { "multipart/form-data" })
-    public CommonResponse<String> checkImageTransfer(@ModelAttribute MultipartFile image) {
-        String imageUrl= s3Util.uploadImageToS3(image, "test", "test");
+    public CommonResponse<String> checkImageTransfer(@ModelAttribute @Validated TestRequest request) {
+
+        log.info("health{}", request.image());
+        String imageUrl= s3Util.uploadImageToS3(request.image(), "test", "test");
         return CommonResponse.ok(s3Util.getPresignedUrlFromS3(imageUrl));
     }
 

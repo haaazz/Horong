@@ -18,7 +18,7 @@ public enum SecurityErrorCode implements BaseErrorCode {
     NOT_MATCHED_TOKEN_TYPE(UNAUTHORIZED, "TOKEN_401_5", "토큰의 타입이 일치하지 않아 디코딩할 수 없습니다."),
     NOT_AUTHENTICATED_ERROR(UNAUTHORIZED, "SECURITY_401_6", "사용자가 인증되지 않았습니다."),
 
-    PASSWORD_USED(CONFLICT, "SECURITY_409_1", "이전에 사용한 비밀번호는 사용할 수 없습니다."),
+    PASSWORD_USED(CONFLICT, "SECURITY_409_1", "6개월 안에 사용한 비밀번호는 사용할 수 없습니다."),
 
     FILTER_ERROR(INTERNAL_SERVER_ERROR, "SECURITY_500_1", "인증 필터 처리 중 오류가 발생했습니다."),
     KAKAO_TOKEN_EXPIRE(UNAUTHORIZED, "SECURITY_500_2", "카카오 토큰을 만료하는 과정에서 오류가 발생했습니다."),

@@ -32,7 +32,7 @@ public class User {
     @Column(nullable = false, length = 66)
     private String password; // 비밀번호는 8~20자까지 설정 가능
 
-    @Column(length = 100)
+    @Column(length = 40)
     private String profileImg; // s3 링크 저장
 
     @Enumerated(EnumType.STRING)
@@ -69,11 +69,10 @@ public class User {
         this.role = role;
     }
 
-    public void signupMember(MemberSignupCommand signupCommand, String imageUrl, String password, Language language) {
+    public void signupMember(MemberSignupCommand signupCommand,  String password, Language language) {
         this.password = password;
         this.nickname = signupCommand.nickname();
         this.userId = signupCommand.userId();
-        this.profileImg = imageUrl;
         this.isDeleted = false;
         this.role = MemberRole.USER;
         this.language = language;
@@ -98,5 +97,6 @@ public class User {
         if (profileImg == null) {
             profileImg = S3_IMAGE.DEFAULT_URL;
         }
+        createdAt = LocalDateTime.now();
     }
 }

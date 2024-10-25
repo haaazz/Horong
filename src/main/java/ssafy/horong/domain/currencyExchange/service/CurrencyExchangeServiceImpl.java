@@ -7,7 +7,6 @@ import ssafy.horong.domain.currencyExchange.entity.CurrencyExchange;
 import ssafy.horong.domain.currencyExchange.repository.CurrencyExchangeRepository;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,8 +37,8 @@ public class CurrencyExchangeServiceImpl implements CurrencyExchangeService {
                                         exchangeRate.getExchangeType().name(),
                                         exchangeRate.getAmount(),
                                         exchangeRate.getUpdatedAt()
-                                )).collect(Collectors.toList())
+                                )).toList()
                 ))
-                .collect(Collectors.toList());
+                .toList();
     }
 }

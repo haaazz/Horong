@@ -7,7 +7,7 @@ spring:
     allow-circular-references: false
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     properties:
       hibernate:
         format_sql: true
@@ -35,11 +35,11 @@ springdoc:
     operations-sorter: alpha
 
 management:
-  server:
-    port: 8081
   endpoint:
     health:
       show-details: always
+    prometheus:
+      enabled: true
   endpoints:
     web:
       exposure:
