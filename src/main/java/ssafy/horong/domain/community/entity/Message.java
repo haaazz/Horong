@@ -21,7 +21,7 @@ public class Message {
     @Column(name = "content", length = 255, nullable = false)
     private String content;
 
-    @Column(name = "image", length = 150)
+    @Column(name = "image", length = 40)
     private String image;
 
     @ManyToOne
