@@ -70,6 +70,21 @@ public class HealthController {
         return CommonResponse.ok(s3Util.getS3UrlFromS3(imageUrl));
     }
 
+    @PostMapping(value = "/audio", consumes = { "multipart/form-data" })
+    public CommonResponse<URI> uploadAudio(@ModelAttribute @Validated mp3TestRequest request) {
+
+        MultipartFile audioFile = request.mp3(); // 파일을 가져옴
+        log.info("Received file: {}", audioFile.getOriginalFilename());
+
+        // mp3 파일을 S3에 업로드
+        String audioUrl = s3Util.uploadImageToS3(audioFile, "audio", "testAudio");
+
+        // 업로드된 파일의 URL 반환
+        return CommonResponse.ok(s3Util.getS3UrlFromS3(audioUrl));
+    }
+
+
+
     @Operation(summary = "서버 상태 확인", description = "서버 상태를 확인합니다.")
     @GetMapping("/ping")
     public CommonResponse<String> ping() {
