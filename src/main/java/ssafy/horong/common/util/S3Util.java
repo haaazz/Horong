@@ -2,6 +2,8 @@ package ssafy.horong.common.util;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -17,6 +19,7 @@ import ssafy.horong.common.exception.s3.S3UploadFailedException;
 import ssafy.horong.common.properties.S3Properties;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -119,6 +122,16 @@ public class S3Util {
             log.error("Presigned URL 생성 중 오류 발생: {}", e.getMessage());
             throw new PresignedUrlGenerationFailException();
         }
+    }
+
+    public URI getS3UrlFromS3(String imagePath) {
+        // imagePath에서 S3 객체 키 추출
+        String objectKey = extractObjectKey(imagePath);
+        log.info(objectKey);
+
+        // S3 URL 생성
+        // S3에서 객체를 가져오기 위해 버킷 이름과 객체 키가 필요합니다.
+        return amazonS3Client.getObject(s3Properties.s3().bucket(), objectKey).getObjectContent().getHttpRequest().getURI(); // 추출한 키를 사용해 URL 생성
     }
 
     private String extractObjectKey(String imagePath) {
