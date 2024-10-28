@@ -1,5 +1,7 @@
 package ssafy.horong.api.health;
 
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import ssafy.horong.common.exception.errorcode.GlobalErrorCode;
 import ssafy.horong.common.util.S3Util;
 
 import javax.sql.DataSource;
+import java.net.URI;
 import java.sql.Connection;
 import java.util.Objects;
 
@@ -60,11 +63,11 @@ public class HealthController {
 
     @Operation(summary = "이미지 전송 확인", description = "이미지 전송이 정상적으로 동작하는지 확인합니다.")
     @PostMapping(value = "/image", consumes = { "multipart/form-data" })
-    public CommonResponse<String> checkImageTransfer(@ModelAttribute @Validated TestRequest request) {
+    public CommonResponse<URI> checkImageTransfer(@ModelAttribute @Validated TestRequest request) {
 
         log.info("health{}", request.image());
         String imageUrl= s3Util.uploadImageToS3(request.image(), "test", "test");
-        return CommonResponse.ok(s3Util.getPresignedUrlFromS3(imageUrl));
+        return CommonResponse.ok(s3Util.getS3UrlFromS3(imageUrl));
     }
 
     @Operation(summary = "서버 상태 확인", description = "서버 상태를 확인합니다.")
