@@ -31,13 +31,14 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class S3Util {
 
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(".jpg", ".jpeg", ".png", ".gif", ".PNG", ".JPG", ".JPEG", ".GIF");
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(".jpg", ".jpeg", ".png", ".gif", ".PNG", ".JPG", ".JPEG", ".GIF", ".mp3", ".MP3", ".wav", ".WAV");
 
     private final AmazonS3 amazonS3Client;
     private final S3Properties s3Properties;
     private final S3Presigner s3Presigner;
 
     private static void validateFileExtension(String extension) {
+        log.info("확장자: {}", extension);
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             throw new ExtensionNotAllowedException();
         }
