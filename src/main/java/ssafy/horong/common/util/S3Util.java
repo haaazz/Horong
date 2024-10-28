@@ -38,6 +38,7 @@ public class S3Util {
     private final S3Presigner s3Presigner;
 
     private static void validateFileExtension(String extension) {
+        log.info("확장자: {}", extension);
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             throw new ExtensionNotAllowedException();
         }
