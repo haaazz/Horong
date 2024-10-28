@@ -5,6 +5,7 @@ import lombok.*;
 import ssafy.horong.domain.member.entity.User;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -22,9 +23,6 @@ public class Comment {
     @JoinColumn(name = "board_id")
     private Post board;
 
-    @Column(length = 50, nullable = false)
-    private String content;
-
     @ManyToOne
     @JoinColumn(name = "author_id")
     private User author;
@@ -36,8 +34,11 @@ public class Comment {
 
     private LocalDateTime deletedDate;
 
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL)
+    private List<ContentByLanguage> contentByCountries;
+
     @PrePersist
     protected void onCreate() {
-        createdDate = LocalDateTime.now(); // 현재 시간으로 설정
+        createdDate = LocalDateTime.now();
     }
 }

@@ -8,8 +8,8 @@ import ssafy.horong.domain.community.entity.Post;
 
 public interface BoardRepository extends JpaRepository<Post, Long> {
 
-    @Query("SELECT p FROM Post p WHERE p.title LIKE %:keyword% OR p.content LIKE %:keyword% OR p.author.nickname LIKE %:keyword%")
-    Page<Post> searchByKeyword(String keyword, Pageable pageable);
+//    @Query("SELECT p FROM Post p WHERE p.title LIKE %:keyword% OR p.content LIKE %:keyword% OR p.author.nickname LIKE %:keyword%")
+//    Page<Post> searchByKeyword(String keyword, Pageable pageable);
 
     @Query("SELECT MAX(p.id) FROM Post p")
     Long findMaxId();

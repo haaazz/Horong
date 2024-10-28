@@ -5,6 +5,7 @@ import lombok.*;
 import ssafy.horong.domain.member.entity.User;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -18,11 +19,8 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "content", length = 255, nullable = false)
-    private String content;
-
-    @Column(name = "image", length = 40)
-    private String image;
+    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL)
+    private List<ContentByLanguage> contentByCountries;
 
     @ManyToOne
     @JoinColumn(name = "sender_id", nullable = false)
