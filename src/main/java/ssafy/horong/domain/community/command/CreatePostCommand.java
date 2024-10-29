@@ -1,12 +1,12 @@
 package ssafy.horong.domain.community.command;
 
-import org.springframework.web.multipart.MultipartFile;
+import ssafy.horong.api.community.request.CreateContentByLanguageRequest;
 import ssafy.horong.domain.community.entity.BoardType;
-import ssafy.horong.domain.member.common.MemberRole;
+
+import java.util.List;
 
 public record CreatePostCommand(
         String title,
-        String content,
-        MultipartFile[] images,
+        List<CreateContentByLanguageRequest> content,
         BoardType boardType
 ) {}

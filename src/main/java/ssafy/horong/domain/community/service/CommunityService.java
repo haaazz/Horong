@@ -14,7 +14,7 @@ public interface CommunityService {
     void deletePost(Long id);
     GetPostResponse getPostById(Long id);
     Page<GetPostResponse> getPostList(Pageable pageable);
-    Page<GetPostResponse> searchPosts(SearchPostsCommand command, Pageable pageable);
+//    Page<GetPostResponse> searchPosts(SearchPostsCommand command, Pageable pageable);
     void createComment(CreateCommentCommand command);
     void updateComment(UpdateCommentCommand command);
     void deleteComment(Long commentId);
