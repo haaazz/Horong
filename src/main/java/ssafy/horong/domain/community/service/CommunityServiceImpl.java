@@ -31,7 +31,9 @@ import ssafy.horong.domain.member.repository.UserRepository;
 import ssafy.horong.domain.community.elastic.PostElasticsearchRepository;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -98,19 +100,34 @@ public class CommunityServiceImpl implements CommunityService {
         // Post 저장 (ContentByLanguage와 ContentImage도 함께 저장됨)
         boardRepository.save(post);
 
-        // 각 언어별로 개별 PostDocument 생성하여 Elasticsearch에 저장
-        for (CreateContentByLanguageRequest contentByLanguage : command.content()) {
-            PostDocument postDocument = PostDocument.builder()
-                    .postId(post.getId())
-                    .title(post.getTitle())
-                    .author(post.getAuthor().getNickname())
-                    .content(contentByLanguage.content())
-                    .language(contentByLanguage.language().name())  // 언어 정보 추가
-                    .build();
+        PostDocument postDocument = PostDocument.builder()
+                .postId(post.getId())
+                .title(post.getTitle())
+                .author(post.getAuthor().getNickname())
+                .build(); // PostDocument 객체 생성
 
-            postElasticsearchRepository.save(postDocument);  // Elasticsearch에 개별 저장
+        for (CreateContentByLanguageRequest contentByLanguage : command.content()) {
+            String language = contentByLanguage.language().name();
+
+            // 언어별 콘텐츠 설정
+            switch (language) {
+                case "KOREAN":
+                    postDocument.setContentKo(contentByLanguage.content());
+                    break;
+                case "CHINESE":
+                    postDocument.setContentZh(contentByLanguage.content());
+                    break;
+                case "JAPANESE":
+                    postDocument.setContentJa(contentByLanguage.content());
+                    break;
+                case "ENGLISH":
+                    postDocument.setContentEn(contentByLanguage.content());
+                    break;
+            }
         }
+        postElasticsearchRepository.save(postDocument);  // Elasticsearch에 개별 저장
     }
+
 
     @Transactional
     public void updatePost(UpdatePostCommand command) {
@@ -154,21 +171,35 @@ public class CommunityServiceImpl implements CommunityService {
         // Post 저장 (Cascade로 ContentImage도 저장됨)
         boardRepository.save(post);
 
-        postElasticsearchRepository.deleteById(post.getId());
+        postElasticsearchRepository.deleteById(String.valueOf(post.getId()));
 
-        // 각 언어별로 개별 PostDocument 생성하여 Elasticsearch에 저장
+        // Elasticsearch에 PostDocument 생성
+        PostDocument postDocument = PostDocument.builder()
+                .postId(post.getId())
+                .title(post.getTitle())
+                .author(post.getAuthor().getNickname())
+                .build(); // PostDocument 객체 생성
+
         for (CreateContentByLanguageRequest contentByLanguage : command.content()) {
-            PostDocument postDocument = PostDocument.builder()
-                    .postId(post.getId())
-                    .title(post.getTitle())
-                    .author(post.getAuthor().getNickname())
-                    .content(contentByLanguage.content())
-                    .language(contentByLanguage.language().name())  // 언어 정보 추가
-                    .build();
+            String language = contentByLanguage.language().name();
 
-            postElasticsearchRepository.save(postDocument);  // Elasticsearch에 개별 저장
+            // 언어별 콘텐츠 설정
+            switch (language) {
+                case "KOREAN":
+                    postDocument.setContentKo(contentByLanguage.content());
+                    break;
+                case "CHINESE":
+                    postDocument.setContentZh(contentByLanguage.content());
+                    break;
+                case "JAPANESE":
+                    postDocument.setContentJa(contentByLanguage.content());
+                    break;
+                case "ENGLISH":
+                    postDocument.setContentEn(contentByLanguage.content());
+                    break;
+            }
         }
-
+        postElasticsearchRepository.save(postDocument);  // Elasticsearch에 개별 저장
     }
 
     @Override
@@ -179,7 +210,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         post.setDeletedDate(LocalDateTime.now());
         log.info("게시글 삭제: {}", id);
-        postElasticsearchRepository.deleteById(post.getId());
+        postElasticsearchRepository.deleteById(String.valueOf(post.getId()));
     }
 
     @Override
@@ -433,20 +464,58 @@ public class CommunityServiceImpl implements CommunityService {
                 .orElseThrow(() -> new RuntimeException("사용자가 존재하지 않습니다."));
     }
 
-//    @Override
-//    public Page<GetPostResponse> searchPosts(SearchPostsCommand command, Pageable pageable) {
-//        log.info("게시글 검색: keyword={}, pageable={}", command.keyword(), pageable);
-//        Page<Post> postPage = boardRepository.searchByKeyword(command.keyword(), pageable);
-//
-//        List<GetPostResponse> postResponses = postPage.getContent().stream()
-//                .map(this::convertToGetPostResponse)
-//                .toList(); // 변경된 부분
-//
-//        return new PageImpl<>(postResponses, pageable, postPage.getTotalElements());
-//    }
-//
-//    private Long getNextPostId() {
-//        Long maxId = boardRepository.findMaxId();
-//        return (maxId != null ? maxId : 0L) + 1;
-//    }
+    @Override
+    public Page<GetPostResponse> searchPosts(SearchPostsCommand command, Pageable pageable) {
+
+        String keyword = command.keyword();
+        log.info("Elasticsearch 검색 시작: keyword={}", keyword);
+
+        // 공백을 기준으로 키워드 분리
+        String[] terms = keyword.split("\\s+");
+
+        // 현재 사용자 언어 가져오기
+        String userLanguage = getCurrentUser().getLanguage().name();
+
+        // 각 단어로 검색을 수행하고 언어가 같은 경우만 중복 없이 결과 수집
+        Set<PostDocument> uniqueDocuments = Arrays.stream(terms)
+                .flatMap(term -> postElasticsearchRepository
+                        .findByTitleOrAuthorOrContentKoOrContentZhOrContentJaOrContentEn(term, term, term, term, term, term)
+                        .stream())
+//                .filter(postDocument -> userLanguage.equals(postDocument.getLanguage())) // 언어 조건 필터 추가
+                .collect(Collectors.toSet());
+        log.info("Elasticsearch 검색 결과: {}", uniqueDocuments);
+        // 검색 결과를 GetPostResponse로 변환
+        List<GetPostResponse> postResponses = uniqueDocuments.stream()
+                .map(postDocument -> {
+                    String content;
+                    switch (userLanguage) {
+                        case "KOREAN":
+                            content = postDocument.getContentKo();
+                            break;
+                        case "CHINESE":
+                            content = postDocument.getContentZh();
+                            break;
+                        case "JAPANESE":
+                            content = postDocument.getContentJa();
+                            break;
+                        case "ENGLISH":
+                            content = postDocument.getContentEn();
+                            break;
+                        default:
+                            content = "";
+                    }
+
+                    return new GetPostResponse(
+                            postDocument.getPostId(),
+                            postDocument.getTitle(),
+                            postDocument.getAuthor(),
+                            content, // 해당 언어의 콘텐츠 설정
+                            List.of()
+                    );
+                })
+                .collect(Collectors.toList());
+
+        // 페이지네이션 적용하여 반환
+        return new PageImpl<>(postResponses, pageable, postResponses.size());
+    }
 }
