@@ -15,7 +15,6 @@ import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
 import ssafy.horong.common.exception.Board.NotAdminExeption;
 import ssafy.horong.common.exception.Board.NotAuthenticatedException;
-import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.elastic.PostDocument;
@@ -44,38 +43,34 @@ public class CommunityServiceImpl implements CommunityService {
 
     private final BoardRepository boardRepository;
     private final CommentRepository commentRepository;
-    private final S3Util s3Util;
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
     private final PostElasticsearchRepository postElasticsearchRepository;
+
+    private static final String POST_NOT_FOUND_MESSAGE = "게시글이 존재하지 않습니다.";
+    private static final String DELETED_POST_MESSAGE = "삭제된 게시글입니다.";
 
     @Transactional
     public void createPost(CreatePostCommand command) {
         validateAdminForNotice(command.boardType());
 
-        // Post 엔티티 빌더 사용
+        // Post 엔티티 생성
         Post post = Post.builder()
                 .title(command.title())
                 .type(command.boardType())
                 .author(getCurrentUser())
                 .build();
 
-        // ContentByLanguage 엔티티 리스트로 변환
+        // ContentByLanguage 리스트 변환
         List<ContentByLanguage> contentEntities = command.content().stream()
                 .map(c -> {
-                    // 각 ContentByCountry의 이미지 매핑
+                    // ContentImage 생성
                     List<ContentImage> contentImages = c.contentImageRequest().stream()
                             .map(ContentImageRequest::imageUrl)
-                            .map(imageUrl -> {
-                                // ContentImage 객체 생성
-                                ContentImage contentImage = ContentImage.builder()
-                                        .imageUrl(imageUrl)
-                                        .build();
-                                return contentImage;
-                            })
-                            .collect(Collectors.toList());
+                            .map(imageUrl -> ContentImage.builder().imageUrl(imageUrl).build())
+                            .toList();
 
-                    // ContentByLanguage 객체 생성
+                    // ContentByLanguage 생성
                     ContentByLanguage contentByLanguage = ContentByLanguage.builder()
                             .content(c.content())
                             .isOriginal(c.isOriginal())
@@ -84,70 +79,52 @@ public class CommunityServiceImpl implements CommunityService {
                             .contentImages(contentImages)
                             .build();
 
-                    // 각 ContentImage에 ContentByLanguage 설정
+                    // ContentImage와 ContentByLanguage 관계 설정
                     contentImages.forEach(contentImage -> contentImage.setContent(contentByLanguage));
-
-                    // ContentByLanguage에 Post 설정
-                    contentByLanguage.setPost(post);
+                    contentByLanguage.setPost(post); // Post 설정
 
                     return contentByLanguage;
                 })
-                .collect(Collectors.toList());
+                .toList();
 
-        // Post에 ContentByLanguage 설정
-        post.setContentByCountries(contentEntities);
+        post.setContentByCountries(contentEntities); // Post에 ContentByLanguage 설정
+        boardRepository.save(post); // Post 저장
 
-        // Post 저장 (ContentByLanguage와 ContentImage도 함께 저장됨)
-        boardRepository.save(post);
+        savePostDocument(post, command.content()); // Elasticsearch에 PostDocument 저장
+    }
 
+    private void savePostDocument(Post post, List<CreateContentByLanguageRequest> contentByCountries) {
         PostDocument postDocument = PostDocument.builder()
                 .postId(post.getId())
                 .title(post.getTitle())
                 .author(post.getAuthor().getNickname())
-                .build(); // PostDocument 객체 생성
+                .build();
 
-        for (CreateContentByLanguageRequest contentByLanguage : command.content()) {
+        for (CreateContentByLanguageRequest contentByLanguage : contentByCountries) {
             String language = contentByLanguage.language().name();
-
-            // 언어별 콘텐츠 설정
             switch (language) {
-                case "KOREAN":
-                    postDocument.setContentKo(contentByLanguage.content());
-                    break;
-                case "CHINESE":
-                    postDocument.setContentZh(contentByLanguage.content());
-                    break;
-                case "JAPANESE":
-                    postDocument.setContentJa(contentByLanguage.content());
-                    break;
-                case "ENGLISH":
-                    postDocument.setContentEn(contentByLanguage.content());
-                    break;
+                case "KOREAN" -> postDocument.setContentKo(contentByLanguage.content());
+                case "CHINESE" -> postDocument.setContentZh(contentByLanguage.content());
+                case "JAPANESE" -> postDocument.setContentJa(contentByLanguage.content());
+                case "ENGLISH" -> postDocument.setContentEn(contentByLanguage.content());
             }
         }
-        postElasticsearchRepository.save(postDocument);  // Elasticsearch에 개별 저장
+        postElasticsearchRepository.save(postDocument);  // Elasticsearch에 PostDocument 저장
     }
-
 
     @Transactional
     public void updatePost(UpdatePostCommand command) {
-        // Post 객체 조회 및 업데이트
         Post post = boardRepository.findById(command.postId())
-                .orElseThrow(() -> new EntityNotFoundException("게시글이 존재하지 않습니다."));
+                .orElseThrow(() -> new EntityNotFoundException(POST_NOT_FOUND_MESSAGE));
 
         post.setTitle(command.title());
 
-        // ContentByLanguage 엔티티 리스트 변환
         List<ContentByLanguage> contentEntities = command.content().stream()
                 .map(c -> {
                     List<ContentImage> contentImages = c.contentImageRequest().stream()
-                            .map(imageRequest -> {
-                                ContentImage contentImage = ContentImage.builder()
-                                        .imageUrl(imageRequest.imageUrl())
-                                        .build();
-                                return contentImage;
-                            })
-                            .collect(Collectors.toList());
+                            .map(ContentImageRequest::imageUrl)
+                            .map(imageUrl -> ContentImage.builder().imageUrl(imageUrl).build())
+                            .toList();
 
                     ContentByLanguage contentByLanguage = ContentByLanguage.builder()
                             .content(c.content())
@@ -155,51 +132,18 @@ public class CommunityServiceImpl implements CommunityService {
                             .language(c.language())
                             .contentType(ContentByLanguage.ContentType.POST)
                             .contentImages(contentImages)
-                            .post(post)  // 여기서 Post 연결
+                            .post(post)
                             .build();
 
-                    // ContentImage에 ContentByLanguage 설정
                     contentImages.forEach(contentImage -> contentImage.setContent(contentByLanguage));
-
                     return contentByLanguage;
                 })
-                .collect(Collectors.toList());
+                .toList();
 
-        // Post에 ContentByLanguage 설정
-        post.setContentByCountries(contentEntities);
-
-        // Post 저장 (Cascade로 ContentImage도 저장됨)
-        boardRepository.save(post);
-
-        postElasticsearchRepository.deleteById(String.valueOf(post.getId()));
-
-        // Elasticsearch에 PostDocument 생성
-        PostDocument postDocument = PostDocument.builder()
-                .postId(post.getId())
-                .title(post.getTitle())
-                .author(post.getAuthor().getNickname())
-                .build(); // PostDocument 객체 생성
-
-        for (CreateContentByLanguageRequest contentByLanguage : command.content()) {
-            String language = contentByLanguage.language().name();
-
-            // 언어별 콘텐츠 설정
-            switch (language) {
-                case "KOREAN":
-                    postDocument.setContentKo(contentByLanguage.content());
-                    break;
-                case "CHINESE":
-                    postDocument.setContentZh(contentByLanguage.content());
-                    break;
-                case "JAPANESE":
-                    postDocument.setContentJa(contentByLanguage.content());
-                    break;
-                case "ENGLISH":
-                    postDocument.setContentEn(contentByLanguage.content());
-                    break;
-            }
-        }
-        postElasticsearchRepository.save(postDocument);  // Elasticsearch에 개별 저장
+        post.setContentByCountries(contentEntities); // Post에 ContentByLanguage 설정
+        boardRepository.save(post); // Post 저장
+        postElasticsearchRepository.deleteById(String.valueOf(post.getId())); // Elasticsearch에서 기존 PostDocument 삭제
+        savePostDocument(post, command.content()); // Elasticsearch에 새로운 PostDocument 저장
     }
 
     @Override
@@ -218,24 +162,21 @@ public class CommunityServiceImpl implements CommunityService {
         log.info("게시글 조회: {}", id);
         Post post = getPost(id);
 
-        // 삭제된 게시글인 경우 예외 처리
         if (post.getDeletedDate() != null) {
-            throw new ResourceNotFoundException("삭제된 게시글입니다.");
+            throw new ResourceNotFoundException(DELETED_POST_MESSAGE);
         }
 
         Language language = getCurrentUser().getLanguage();
-
         String content = post.getContentByCountries().stream()
                 .filter(c -> c.getLanguage() == language)
                 .findFirst()
                 .map(ContentByLanguage::getContent)
-                .orElseThrow(() -> new ResourceNotFoundException("게시글이 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(POST_NOT_FOUND_MESSAGE));
 
-        // 삭제되지 않은 댓글만 필터링
         List<GetCommentResponse> commentResponses = convertToCommentResponse(
                 post.getComments().stream()
                         .filter(comment -> comment.getDeletedDate() == null)
-                        .collect(Collectors.toList())
+                        .toList()
         );
 
         return new GetPostResponse(
@@ -255,23 +196,20 @@ public class CommunityServiceImpl implements CommunityService {
         Language language = getCurrentUser().getLanguage();
 
         List<GetPostResponse> postResponses = postPage.getContent().stream()
-                // 삭제된 게시글 필터링
                 .filter(post -> post.getDeletedDate() == null)
                 .map(post -> {
                     String content = post.getContentByCountries().stream()
                             .filter(c -> c.getLanguage() == language)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
-                            .orElseThrow(() -> new ResourceNotFoundException("게시글이 존재하지 않습니다."));
+                            .orElseThrow(() -> new ResourceNotFoundException(POST_NOT_FOUND_MESSAGE));
 
-                    // 삭제되지 않은 댓글만 포함
                     List<GetCommentResponse> commentResponses = convertToCommentResponse(
                             post.getComments().stream()
                                     .filter(comment -> comment.getDeletedDate() == null)
-                                    .collect(Collectors.toList())
+                                    .toList()
                     );
 
-                    // GetPostResponse 객체 생성
                     return new GetPostResponse(
                             post.getId(),
                             post.getTitle(),
@@ -280,44 +218,34 @@ public class CommunityServiceImpl implements CommunityService {
                             commentResponses
                     );
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         return new PageImpl<>(postResponses, pageable, postPage.getTotalElements());
     }
-
 
     @Override
     @Transactional
     public void createComment(CreateCommentCommand command) {
         Post post = getPost(command.postId());
 
-        // 댓글 생성
         Comment comment = Comment.builder()
                 .author(getCurrentUser())
                 .board(post)
                 .build();
 
-        // 언어별 콘텐츠 생성 및 Comment 설정
         List<ContentByLanguage> contentByCountries = command.contentByCountries().stream()
-                .map(contentRequest -> {
-                    ContentByLanguage contentByLanguage = ContentByLanguage.builder()
-                            .language(contentRequest.language())
-                            .content(contentRequest.content())
-                            .isOriginal(contentRequest.isOriginal())
-                            .contentType(ContentByLanguage.ContentType.COMMENT)
-                            .comment(comment) // Comment 설정
-                            .build();
-                    return contentByLanguage;
-                })
-                .collect(Collectors.toList());
+                .map(contentRequest -> ContentByLanguage.builder()
+                        .language(contentRequest.language())
+                        .content(contentRequest.content())
+                        .isOriginal(contentRequest.isOriginal())
+                        .contentType(ContentByLanguage.ContentType.COMMENT)
+                        .comment(comment)
+                        .build())
+                .toList();
 
-        // Comment에 언어별 콘텐츠 리스트 설정
         comment.setContentByCountries(contentByCountries);
-
-        // 댓글 저장
         commentRepository.save(comment);
     }
-
 
     @Override
     @Transactional
@@ -333,37 +261,30 @@ public class CommunityServiceImpl implements CommunityService {
     @Transactional
     public void updateComment(UpdateCommentCommand command) {
         Comment comment = getComment(command.commentId());
-        validateUserOrAdmin(comment.getAuthor()); // 사용자 또는 관리자인지 검증
+        validateUserOrAdmin(comment.getAuthor());
 
-        // 언어별 콘텐츠가 없으면 예외 처리 또는 기본값 설정
         if (command.contentByCountries() != null && !command.contentByCountries().isEmpty()) {
-            // 기존 언어별 콘텐츠 삭제
             comment.getContentByCountries().clear();
 
-            // 새로운 언어별 콘텐츠 추가
             command.contentByCountries().forEach(contentRequest -> {
                 ContentByLanguage content = ContentByLanguage.builder()
-                        .comment(comment) // 댓글과 연결
-                        .language(contentRequest.language()) // 언어 설정
-                        .content(contentRequest.content()) // 콘텐츠 설정
-                        .isOriginal(contentRequest.isOriginal()) // 원본 여부 설정
-                        .contentType(ContentByLanguage.ContentType.COMMENT) // 콘텐츠 타입 설정
+                        .comment(comment)
+                        .language(contentRequest.language())
+                        .content(contentRequest.content())
+                        .isOriginal(contentRequest.isOriginal())
+                        .contentType(ContentByLanguage.ContentType.COMMENT)
                         .build();
-                // 언어별 콘텐츠 저장
                 comment.getContentByCountries().add(content);
             });
         }
 
-        // updatedDate 설정
-        comment.setUpdatedDate(LocalDateTime.now()); // 업데이트 날짜 설정
-
-        // 변경된 댓글 저장
+        comment.setUpdatedDate(LocalDateTime.now());
         commentRepository.save(comment);
     }
 
     private Post getPost(Long id) {
         return boardRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("게시글이 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(POST_NOT_FOUND_MESSAGE));
     }
 
     private Comment getComment(Long commentId) {
@@ -388,13 +309,11 @@ public class CommunityServiceImpl implements CommunityService {
     private List<GetCommentResponse> convertToCommentResponse(List<Comment> comments) {
         return comments.stream()
                 .map(comment -> {
-                    // 댓글의 언어별 콘텐츠를 가져옴
-                    List<ContentByLanguage> contentByCountries = comment.getContentByCountries();
-                    String content = contentByCountries.stream()
-                            .filter(c -> c.getLanguage() == getCurrentUser().getLanguage()) // 현재 사용자의 언어에 해당하는 콘텐츠를 필터링
+                    String content = comment.getContentByCountries().stream()
+                            .filter(c -> c.getLanguage() == getCurrentUser().getLanguage())
                             .findFirst()
                             .map(ContentByLanguage::getContent)
-                            .orElse(null); // 언어별 콘텐츠가 없을 경우 기본값 설정
+                            .orElse(null);
 
                     return new GetCommentResponse(
                             comment.getId(),
@@ -408,16 +327,13 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public void sendMessage(SendMessageCommand command) {
-        String from = getCurrentUser().getNickname();
-
-        // ContentByLanguage 리스트를 생성
         List<ContentByLanguage> contentByCountries = command.contentsByLanguages().stream()
                 .map(contentByLanguageCommand -> ContentByLanguage.builder()
                         .language(contentByLanguageCommand.language())
                         .content(contentByLanguageCommand.content())
                         .contentType(ContentByLanguage.ContentType.MESSAGE)
                         .build())
-                .collect(Collectors.toList());
+                .toList();
 
         Message message = Message.builder()
                 .contentByCountries(contentByCountries)
@@ -426,36 +342,27 @@ public class CommunityServiceImpl implements CommunityService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        // Message 객체와 ContentByLanguage 객체 간의 양방향 연관관계 설정
         contentByCountries.forEach(contentByLanguage -> contentByLanguage.setMessage(message));
-
-        // 메시지를 저장
         messageRepository.save(message);
     }
-
 
     @Override
     public List<GetMessageListResponse> getMessageList(GetMessageListCommand command) {
         List<Message> messages = messageRepository.findBySenderIdAndreceiver(command.senderId(), getCurrentUser().getId());
-        Language userLanguage = getCurrentUser().getLanguage(); // 현재 사용자의 언어 가져오기
+        Language userLanguage = getCurrentUser().getLanguage();
 
         return messages.stream()
                 .map(message -> {
-                    // 사용자의 언어에 맞는 콘텐츠 가져오기
                     String content = message.getContentByCountries().stream()
                             .filter(c -> c.getLanguage() == userLanguage)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
-                            .orElse("기본 메시지 내용"); // 언어에 맞는 콘텐츠가 없을 경우 기본값 설정
+                            .orElse("기본 메시지 내용");
 
-                    return new GetMessageListResponse(
-                            content,
-                            message.getSender().getNickname()
-                    );
+                    return new GetMessageListResponse(content, message.getSender().getNickname());
                 })
                 .toList();
     }
-
 
     private User getCurrentUser() {
         Long userId = SecurityUtil.getLoginMemberId()
@@ -466,56 +373,39 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Override
     public Page<GetPostResponse> searchPosts(SearchPostsCommand command, Pageable pageable) {
-
         String keyword = command.keyword();
         log.info("Elasticsearch 검색 시작: keyword={}", keyword);
 
-        // 공백을 기준으로 키워드 분리
         String[] terms = keyword.split("\\s+");
-
-        // 현재 사용자 언어 가져오기
         String userLanguage = getCurrentUser().getLanguage().name();
 
-        // 각 단어로 검색을 수행하고 언어가 같은 경우만 중복 없이 결과 수집
         Set<PostDocument> uniqueDocuments = Arrays.stream(terms)
                 .flatMap(term -> postElasticsearchRepository
                         .findByTitleOrAuthorOrContentKoOrContentZhOrContentJaOrContentEn(term, term, term, term, term, term)
                         .stream())
-//                .filter(postDocument -> userLanguage.equals(postDocument.getLanguage())) // 언어 조건 필터 추가
                 .collect(Collectors.toSet());
+
         log.info("Elasticsearch 검색 결과: {}", uniqueDocuments);
-        // 검색 결과를 GetPostResponse로 변환
         List<GetPostResponse> postResponses = uniqueDocuments.stream()
                 .map(postDocument -> {
-                    String content;
-                    switch (userLanguage) {
-                        case "KOREAN":
-                            content = postDocument.getContentKo();
-                            break;
-                        case "CHINESE":
-                            content = postDocument.getContentZh();
-                            break;
-                        case "JAPANESE":
-                            content = postDocument.getContentJa();
-                            break;
-                        case "ENGLISH":
-                            content = postDocument.getContentEn();
-                            break;
-                        default:
-                            content = "";
-                    }
+                    String content = switch (userLanguage) {
+                        case "KOREAN" -> postDocument.getContentKo();
+                        case "CHINESE" -> postDocument.getContentZh();
+                        case "JAPANESE" -> postDocument.getContentJa();
+                        case "ENGLISH" -> postDocument.getContentEn();
+                        default -> "";
+                    };
 
                     return new GetPostResponse(
                             postDocument.getPostId(),
                             postDocument.getTitle(),
                             postDocument.getAuthor(),
-                            content, // 해당 언어의 콘텐츠 설정
+                            content,
                             List.of()
                     );
                 })
-                .collect(Collectors.toList());
+                .toList();
 
-        // 페이지네이션 적용하여 반환
         return new PageImpl<>(postResponses, pageable, postResponses.size());
     }
 }
