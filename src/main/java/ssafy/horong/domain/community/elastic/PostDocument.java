@@ -4,8 +4,8 @@ import lombok.Builder;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
-
-import java.util.List;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 @Data
 @Builder
@@ -17,7 +17,18 @@ public class PostDocument {
     private Long postId; // 실제 게시물 ID
     private String title;
     private String author;
-    private String content;
-    private String language;
-}
 
+    @Field(type = FieldType.Text, analyzer = "nori") // 한국어 분석기
+    private String contentKo; // 한국어 콘텐츠
+
+    @Field(type = FieldType.Text, analyzer = "ik_max_word") // 중국어 분석기
+    private String contentZh; // 중국어 콘텐츠
+
+    @Field(type = FieldType.Text, analyzer = "kuromoji") // 일본어 분석기
+    private String contentJa; // 일본어 콘텐츠
+
+    @Field(type = FieldType.Text, analyzer = "english") // 영어 분석기
+    private String contentEn; // 영어 콘텐츠
+
+    private String language; // 언어 정보
+}

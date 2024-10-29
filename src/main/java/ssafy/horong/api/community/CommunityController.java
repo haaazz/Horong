@@ -106,17 +106,17 @@ public class CommunityController {
         return CommonResponse.ok("댓글이 삭제되었습니다.", null);
     }
 
-//    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
-//    @Operation(summary = "게시글 검색", description = "게시글을 검색하는 API입니다.")
-//    @GetMapping("/posts/search/{keyword}")
-//    public CommonResponse<Page<GetPostResponse>> searchPosts(
-//            @PathVariable String keyword,
-//            @Parameter(hidden = true) @PageableDefault(size = 10, sort = "createdDate") Pageable pageable) {
-//        log.info("[CommunityController] 게시글 검색 >>>> keyword: {}", keyword);
-//        SearchPostsRequest request = new SearchPostsRequest(keyword);
-//        Page<GetPostResponse> response = communityService.searchPosts(request.toCommand(), pageable);
-//        return CommonResponse.ok(response);
-//    }
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "게시글 검색", description = "게시글을 검색하는 API입니다.")
+    @GetMapping("/posts/search/{keyword}")
+    public CommonResponse<Page<GetPostResponse>> searchPosts(
+            @PathVariable String keyword,
+            @Parameter(hidden = true) @PageableDefault(size = 10, sort = "createdDate") Pageable pageable) {
+        log.info("[CommunityController] 게시글 검색 >>>> keyword: {}", keyword);
+        SearchPostsRequest request = new SearchPostsRequest(keyword);
+        Page<GetPostResponse> response = communityService.searchPosts(request.toCommand(), pageable);
+        return CommonResponse.ok(response);
+    }
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "메시지 전송", description = "메시지를 전송하는 API입니다.")
