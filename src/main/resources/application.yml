@@ -34,6 +34,10 @@ spring:
         pool:
           max-active: 8
           max-wait: 20000
+  elasticsearch:
+    username: ${ELASTICSEARCH_USERNAME}
+    password: ${ELASTICSEARCH_PASSWORD}
+    uris: ${ELASTICSEARCH_URIS}
 
   graphql:
     cors:

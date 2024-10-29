@@ -11,7 +11,8 @@ import ssafy.horong.common.properties.*;
         KakaoLoginProperties.class,
         JwtProperties.class,
         S3Properties.class,
-        WebClientProperties.class
+        WebClientProperties.class,
+        ElasticsearchProperties.class,
 })
 public class PropertiesConfig {
 }

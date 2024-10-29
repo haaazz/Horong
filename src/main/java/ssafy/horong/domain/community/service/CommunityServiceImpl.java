@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ssafy.horong.api.community.request.CreateContentByLanguageRequest;
 import ssafy.horong.api.community.response.GetCommentResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
@@ -17,6 +18,7 @@ import ssafy.horong.common.exception.Board.NotAuthenticatedException;
 import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.community.command.*;
+import ssafy.horong.domain.community.elastic.PostDocument;
 import ssafy.horong.domain.community.entity.*;
 import ssafy.horong.api.community.request.ContentImageRequest;
 import ssafy.horong.domain.community.repository.BoardRepository;
@@ -26,6 +28,7 @@ import ssafy.horong.domain.member.common.Language;
 import ssafy.horong.domain.member.common.MemberRole;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
+import ssafy.horong.domain.community.elastic.PostElasticsearchRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,6 +45,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final S3Util s3Util;
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
+    private final PostElasticsearchRepository postElasticsearchRepository;
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -93,6 +97,19 @@ public class CommunityServiceImpl implements CommunityService {
 
         // Post 저장 (ContentByLanguage와 ContentImage도 함께 저장됨)
         boardRepository.save(post);
+
+        // 각 언어별로 개별 PostDocument 생성하여 Elasticsearch에 저장
+        for (CreateContentByLanguageRequest contentByLanguage : command.content()) {
+            PostDocument postDocument = PostDocument.builder()
+                    .postId(post.getId())
+                    .title(post.getTitle())
+                    .author(post.getAuthor().getNickname())
+                    .content(contentByLanguage.content())
+                    .language(contentByLanguage.language().name())  // 언어 정보 추가
+                    .build();
+
+            postElasticsearchRepository.save(postDocument);  // Elasticsearch에 개별 저장
+        }
     }
 
     @Transactional
@@ -136,8 +153,23 @@ public class CommunityServiceImpl implements CommunityService {
 
         // Post 저장 (Cascade로 ContentImage도 저장됨)
         boardRepository.save(post);
-    }
 
+        postElasticsearchRepository.deleteById(post.getId());
+
+        // 각 언어별로 개별 PostDocument 생성하여 Elasticsearch에 저장
+        for (CreateContentByLanguageRequest contentByLanguage : command.content()) {
+            PostDocument postDocument = PostDocument.builder()
+                    .postId(post.getId())
+                    .title(post.getTitle())
+                    .author(post.getAuthor().getNickname())
+                    .content(contentByLanguage.content())
+                    .language(contentByLanguage.language().name())  // 언어 정보 추가
+                    .build();
+
+            postElasticsearchRepository.save(postDocument);  // Elasticsearch에 개별 저장
+        }
+
+    }
 
     @Override
     @Transactional
@@ -147,6 +179,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         post.setDeletedDate(LocalDateTime.now());
         log.info("게시글 삭제: {}", id);
+        postElasticsearchRepository.deleteById(post.getId());
     }
 
     @Override
