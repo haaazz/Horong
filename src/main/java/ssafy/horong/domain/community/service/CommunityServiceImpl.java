@@ -416,7 +416,7 @@ public class CommunityServiceImpl implements CommunityService {
             // HTML 특수문자 수동 이스케이프
             String plainText = escapeHtml(safeContent);
 
-            if (plainText.length() > 1000) {
+            if (plainText.length() > 255) {
                 throw new ContentTooLongExeption();
             }
         }
