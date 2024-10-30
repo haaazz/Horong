@@ -22,6 +22,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByNickname(@Param("nickname") String nickname);
 
     @Query("""
+        SELECT COUNT(p) > 0
+        FROM User p
+        WHERE p.userId = :userId AND p.isDeleted = false
+    """)
+    boolean existsByUserId(@Param("userId") String userId);
+
+    @Query("""
         SELECT p
         FROM User p
         WHERE p.userId = :userId AND p.isDeleted = false

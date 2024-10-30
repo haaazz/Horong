@@ -1,8 +1,8 @@
 package ssafy.horong.domain.community.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.safety.Safelist;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -13,8 +13,8 @@ import ssafy.horong.api.community.request.CreateContentByLanguageRequest;
 import ssafy.horong.api.community.response.GetCommentResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
-import ssafy.horong.common.exception.Board.NotAdminExeption;
-import ssafy.horong.common.exception.Board.NotAuthenticatedException;
+import org.jsoup.Jsoup;
+import ssafy.horong.common.exception.Board.*;
 import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.elastic.PostDocument;
@@ -47,12 +47,10 @@ public class CommunityServiceImpl implements CommunityService {
     private final MessageRepository messageRepository;
     private final PostElasticsearchRepository postElasticsearchRepository;
 
-    private static final String POST_NOT_FOUND_MESSAGE = "게시글이 존재하지 않습니다.";
-    private static final String DELETED_POST_MESSAGE = "삭제된 게시글입니다.";
-
     @Transactional
     public void createPost(CreatePostCommand command) {
         validateAdminForNotice(command.boardType());
+        validatePostCreateRequest(command.content());
 
         // Post 엔티티 생성
         Post post = Post.builder()
@@ -114,8 +112,9 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Transactional
     public void updatePost(UpdatePostCommand command) {
+        validatePostCreateRequest(command.content());
         Post post = boardRepository.findById(command.postId())
-                .orElseThrow(() -> new EntityNotFoundException(POST_NOT_FOUND_MESSAGE));
+                .orElseThrow(PostNotFoundException::new);
 
         post.setTitle(command.title());
 
@@ -163,7 +162,7 @@ public class CommunityServiceImpl implements CommunityService {
         Post post = getPost(id);
 
         if (post.getDeletedDate() != null) {
-            throw new ResourceNotFoundException(DELETED_POST_MESSAGE);
+            throw new PostDeletedException();
         }
 
         Language language = getCurrentUser().getLanguage();
@@ -171,7 +170,7 @@ public class CommunityServiceImpl implements CommunityService {
                 .filter(c -> c.getLanguage() == language)
                 .findFirst()
                 .map(ContentByLanguage::getContent)
-                .orElseThrow(() -> new ResourceNotFoundException(POST_NOT_FOUND_MESSAGE));
+                .orElseThrow(PostNotFoundException::new);
 
         List<GetCommentResponse> commentResponses = convertToCommentResponse(
                 post.getComments().stream()
@@ -202,7 +201,7 @@ public class CommunityServiceImpl implements CommunityService {
                             .filter(c -> c.getLanguage() == language)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
-                            .orElseThrow(() -> new ResourceNotFoundException(POST_NOT_FOUND_MESSAGE));
+                            .orElseThrow(PostNotFoundException::new);
 
                     List<GetCommentResponse> commentResponses = convertToCommentResponse(
                             post.getComments().stream()
@@ -284,7 +283,7 @@ public class CommunityServiceImpl implements CommunityService {
 
     private Post getPost(Long id) {
         return boardRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(POST_NOT_FOUND_MESSAGE));
+                .orElseThrow(PostNotFoundException::new);
     }
 
     private Comment getComment(Long commentId) {
@@ -407,5 +406,28 @@ public class CommunityServiceImpl implements CommunityService {
                 .toList();
 
         return new PageImpl<>(postResponses, pageable, postResponses.size());
+    }
+
+    public void validatePostCreateRequest(List<CreateContentByLanguageRequest> contents) {
+        for (CreateContentByLanguageRequest request : contents) {
+            // 모든 HTML 태그와 속성을 제거하여 순수 텍스트만 남김
+            String safeContent = Jsoup.clean(request.content(), Safelist.none());
+
+            // HTML 특수문자 수동 이스케이프
+            String plainText = escapeHtml(safeContent);
+
+            if (plainText.length() > 1000) {
+                throw new ContentTooLongExeption();
+            }
+        }
+    }
+
+    private String escapeHtml(String input) {
+        if (input == null) return null;
+        return input.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#x27;");
     }
 }

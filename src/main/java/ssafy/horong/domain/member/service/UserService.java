@@ -15,6 +15,7 @@ public interface UserService {
     UserDetailResponse updateMemberProfile(UpdateProfileCommand command);
     String deleteMember();
     boolean checkNickname(String nickname);
+    boolean checkUserId(String userId);
     void updateMemberPassword(PasswordUpdateCommand command);
     UserIdResponse getMemberId();
 

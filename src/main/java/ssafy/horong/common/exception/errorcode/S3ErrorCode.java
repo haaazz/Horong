@@ -9,7 +9,7 @@ import static ssafy.horong.api.StatusCode.NOT_FOUND;
 @Getter
 @AllArgsConstructor
 public enum S3ErrorCode implements BaseErrorCode{
-    EXTENSION_NOT_ALLOWED(BAD_REQUEST, "S3_400_1", "프로필 이미지의 확장자는 jpg, jpeg, png, gif만 가능합니다."),
+    EXTENSION_NOT_ALLOWED(BAD_REQUEST, "S3_400_1", "프로필 이미지의 확장자는 jpg, jpeg, png, gif, mp3, wav만 가능합니다."),
     IMAGE_TOO_LARGE(BAD_REQUEST, "S3_400_2", "업로드할 이미지 용량이 2MB를 초과합니다."),
     S3_IMAGE_UPLOAD_FAILED(BAD_REQUEST, "S3_400_3", "이미지 업로드에 실패하였습니다."),
     PERSIGNEDURL_GENERATION_FAILED(BAD_REQUEST, "S3_400_4", "PreSignedURL 생성에 실패하였습니다."),
