@@ -143,6 +143,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public boolean checkUserId(String userId) {
+        log.info("[UserService] 아이디 중복 체크");
+        boolean isDuplicated = userRepository.existsByUserId(userId);
+        log.debug("[UserService] >>>> 아이디: {}, 중복 여부: {}", userId, isDuplicated);
+        return isDuplicated;
+    }
+
+    @Override
     @Transactional
     public void updateMemberPassword(PasswordUpdateCommand command) {
         log.info("[UserService] 비밀번호 변경");
@@ -170,7 +178,6 @@ public class UserServiceImpl implements UserService {
 
         return user != null && !user.isDeleted();
     }
-
 
     private User createNewUser(MemberSignupCommand command) {
         return User.builder()
@@ -226,7 +233,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private void verifyNewPassword(String newPassword, User user) {
-        if (newPassword.length() < 8 || !newPassword.matches(".*[!@#$%^&*].*")) {
+        if (newPassword.length() < 8 || 20 < newPassword.length() || !newPassword.matches(".*[!@#$%^&*].*")) {
             throw new InvalidPasswordException();
         }
 

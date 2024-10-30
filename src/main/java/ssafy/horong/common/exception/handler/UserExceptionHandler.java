@@ -25,25 +25,11 @@ public class UserExceptionHandler {
         return CommonResponse.badRequest(e.getErrorCode());
     }
 
-    @ExceptionHandler(TempUserNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public CommonResponse handleNotFoundTempUser(TempUserNotFoundException e) {
-        log.error("TempUserNotFoundException Error", e);
-        return CommonResponse.badRequest(e.getErrorCode());
-    }
-
     @ExceptionHandler(UserAlreadyDeletedException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public CommonResponse handleMemberAlreadyDeletedException(UserAlreadyDeletedException e) {
         log.error("UserAlreadyDeletedException Error", e);
         return CommonResponse.conflict(e.getErrorCode());
-    }
-
-    @ExceptionHandler(MessageSendingException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public CommonResponse handleMessageSendingException(MessageSendingException e) {
-        log.error("MessageSendingException Error", e);
-        return CommonResponse.badRequest(e.getErrorCode());
     }
 
     @ExceptionHandler(VerificationException.class)
@@ -67,20 +53,6 @@ public class UserExceptionHandler {
         return CommonResponse.badRequest(e.getErrorCode());
     }
 
-    @ExceptionHandler(PhoneNumberNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public CommonResponse handlePhoneNumberNotFoundException(PhoneNumberNotFoundException e) {
-        log.error("PhoneNumberNotFoundException Error", e);
-        return CommonResponse.badRequest(e.getErrorCode());
-    }
-
-    @ExceptionHandler(KakaoMailUserNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public CommonResponse handleKakaoMailUserNotFoundException(KakaoMailUserNotFoundException e) {
-        log.error("KakaoMailUserNotFoundException Error", e);
-        return CommonResponse.badRequest(e.getErrorCode());
-    }
-
     @ExceptionHandler(UserIdDuplicateException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public CommonResponse handleEmailDuplicateException(UserIdDuplicateException e) {
@@ -92,13 +64,6 @@ public class UserExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     public CommonResponse handleNickNameDuplicateException(NickNameDuplicateException e) {
         log.error("NickNameDuplicateException Error", e);
-        return CommonResponse.conflict(e.getErrorCode());
-    }
-
-    @ExceptionHandler(UserAlreadyBookedException.class)
-    @ResponseStatus(HttpStatus.CONFLICT)
-    public CommonResponse<?> handleUserAlreadyBookedException(UserAlreadyBookedException e) {
-        log.error("UserAlreadyBookedException occurs", e);
         return CommonResponse.conflict(e.getErrorCode());
     }
 }

@@ -54,6 +54,15 @@ public class MemberController {
         return CommonResponse.ok(message, null);
     }
 
+    @Operation(summary = "아이디 중복 조회", description = "아이디 중복 조회하는 API입니다.")
+    @GetMapping("/userId")
+    public CommonResponse<String> checkUserId(@RequestParam String userId) {
+        log.info("[UserController] 아이디 중복 조회 >>>> userId: {}", userId);
+        boolean isDuplicated = userService.checkUserId(userId);
+        String message = isDuplicated ? "이미 사용중인 아이디입니다." : "사용 가능한 아이디입니다.";
+        return CommonResponse.ok(message, null);
+    }
+
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "로그인 시 회원 정보 조회", description = "로그인 시 회원 정보를 조회하는 API입니다.")
     @GetMapping
