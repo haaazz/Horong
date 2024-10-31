@@ -149,6 +149,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean checkUserId(String userId) {
+        if (isDuplicateUserId(userId)) {
+            throw new UserIdDuplicateException();
+        }
         log.info("[UserService] 아이디 중복 체크");
         boolean isDuplicated = userRepository.existsByUserId(userId);
         log.debug("[UserService] >>>> 아이디: {}, 중복 여부: {}", userId, isDuplicated);
