@@ -47,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse login(LoginCommand command) {
+
         LoginToken tokens;
         String userId = command.userId();
         String password = command.password();

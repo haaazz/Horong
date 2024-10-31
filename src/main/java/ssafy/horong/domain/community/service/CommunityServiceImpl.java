@@ -337,7 +337,7 @@ public class CommunityServiceImpl implements CommunityService {
         Message message = Message.builder()
                 .contentByCountries(contentByCountries)
                 .sender(getCurrentUser())
-                .receiver(userRepository.findByNickname(command.receiverNickname()))
+                .receiver(userRepository.findByNickname(command.receiverNickname()).orElse(null))
                 .createdAt(LocalDateTime.now())
                 .build();
 
