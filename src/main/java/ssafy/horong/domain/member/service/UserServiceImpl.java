@@ -139,6 +139,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean checkNickname(String nickname) {
         log.info("[UserService] 닉네임 중복 체크");
+        if (isDuplicateNickname(nickname)) {
+            throw new NickNameDuplicateException();
+        }
         boolean isDuplicated = userRepository.existsByNickname(nickname);
         log.debug("[UserService] >>>> 닉네임: {}, 중복 여부: {}", nickname, isDuplicated);
         return isDuplicated;
