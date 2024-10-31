@@ -5,6 +5,6 @@ import ssafy.horong.common.exception.errorcode.UserErrorCode;
 
 public class UserIdDuplicateException extends BaseException {
     public UserIdDuplicateException() {
-        super(UserErrorCode.EMAIL_DUPLICATE);
+        super(UserErrorCode.USERID_DUPLICATE);
     }
 }

@@ -53,10 +53,6 @@ public class UserServiceImpl implements UserService {
 
         log.info("[UserService] 유저 회원가입");
 
-        if (isDuplicateUserId(signupCommand.userId())) {
-            throw new UserIdDuplicateException();
-        }
-
         User userToSave = createNewUser(signupCommand);
         String encodedPassword = passwordEncoder.encode(signupCommand.password());
         userToSave.signupMember(signupCommand,encodedPassword, signupCommand.language());
@@ -108,6 +104,8 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserDetailResponse updateMemberProfile(UpdateProfileCommand command) {
         log.info("[UserService] 유저 정보 변경");
+
+        validateUpdateProfileCommand(command);
         User currentUser = getCurrentLoggedInMember();
 
         MultipartFile profileImageFile = command.profileImagePath();
@@ -178,6 +176,13 @@ public class UserServiceImpl implements UserService {
 
     private boolean isDuplicateUserId(String userId) {
         User user = userRepository.findByUserId(userId)
+                .orElse(null);
+
+        return user != null && !user.isDeleted();
+    }
+
+    private boolean isDuplicateNickname(String nickname) {
+        User user = userRepository.findByNickname(nickname)
                 .orElse(null);
 
         return user != null && !user.isDeleted();
@@ -260,13 +265,38 @@ public class UserServiceImpl implements UserService {
             throw new UserIdNotValidException();
         }
         if (command.password().length() < 8 || command.password().length() > 20) {
-            throw new PasswordUsedException();
+            throw new PasswordNotValidExeption();
+        }
+        if (!command.password().matches(".*[!@#$%^&*].*")){
+            throw new InvalidPasswordException();
         }
         if (command.nickname().length() < 2 || command.nickname().length() > 20) {
             throw new NicknameNotValidExeption();
         }
         if (!isValidLanguage(command.language())) {
             throw new LanguageNotValidExeption();
+        }
+        if (isDuplicateUserId(command.userId())) {
+            throw new UserIdDuplicateException();
+        }
+        if (isDuplicateNickname(command.nickname())) {
+            throw new NickNameDuplicateException();
+        }
+    }
+
+    public void validateUpdateProfileCommand(UpdateProfileCommand command) {
+        if (command.nickname() != null) {
+            if (command.nickname().length() < 2 || command.nickname().length() > 20) {
+                throw new NicknameNotValidExeption();
+            }
+            if (isDuplicateNickname(command.nickname())) {
+                throw new NickNameDuplicateException();
+            }
+        }
+        if (command.language() != null) {
+            if (!isValidLanguage(command.language())) {
+                throw new LanguageNotValidExeption();
+            }
         }
     }
 
@@ -278,5 +308,4 @@ public class UserServiceImpl implements UserService {
         }
         return false;
     }
-
 }

@@ -8,7 +8,7 @@ import static ssafy.horong.api.StatusCode.*;
 @Getter
 @AllArgsConstructor
 public enum UserErrorCode implements BaseErrorCode {
-    EMAIL_DUPLICATE(BAD_REQUEST, "USER_400_1", "이미 존재하는 이메일입니다."),
+    USERID_DUPLICATE(BAD_REQUEST, "USER_400_1", "이미 존재하는 ID입니다."),
     NICKNAME_DUPLICATE(BAD_REQUEST, "USER_400_2", "이미 존재하는 닉네임입니다."),
     USER_DUPLICATE(BAD_REQUEST, "USER_400_3", "이미 존재하는 회원입니다."),
     PASSWORD_NOT_MATCH(NOT_FOUND, "USER_400_5", "비밀번호가 일치하지 않습니다."),
