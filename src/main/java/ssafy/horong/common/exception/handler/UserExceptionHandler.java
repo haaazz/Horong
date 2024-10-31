@@ -88,4 +88,10 @@ public class UserExceptionHandler {
         return CommonResponse.badRequest(e.getErrorCode());
     }
 
+    @ExceptionHandler(LanguageNotValidExeption.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handleLanguageNotValidExeption(LanguageNotValidExeption e) {
+        log.error("LanguageNotValidExeption Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
 }

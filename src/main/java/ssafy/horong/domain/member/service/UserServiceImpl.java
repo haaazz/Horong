@@ -23,6 +23,7 @@ import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.member.command.MemberSignupCommand;
 import ssafy.horong.domain.member.command.PasswordUpdateCommand;
 import ssafy.horong.domain.member.command.UpdateProfileCommand;
+import ssafy.horong.domain.member.common.Language;
 import ssafy.horong.domain.member.common.PasswordHistory;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.PasswordHistoryRepository;
@@ -264,5 +265,18 @@ public class UserServiceImpl implements UserService {
         if (command.nickname().length() < 2 || command.nickname().length() > 20) {
             throw new NicknameNotValidExeption();
         }
+        if (!isValidLanguage(command.language())) {
+            throw new LanguageNotValidExeption();
+        }
     }
+
+    private boolean isValidLanguage(Language language) {
+        for (Language lang : Language.values()) {
+            if (lang == language) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

@@ -15,6 +15,7 @@ public enum UserErrorCode implements BaseErrorCode {
     USERID_NOT_VALID(BAD_REQUEST, "USER_400_4", "유저 ID는 최대 16자까지 입력할 수 있습니다."),
     PASSWORD_NOT_VALID(BAD_REQUEST, "USER_400_6", "비밀번호는 8자 이상 20자 이하로 입력해야 합니다."),
     NICKNAME_NOT_VALID(BAD_REQUEST, "USER_400_7", "닉네임은 2자 이상 20자 이하로 입력해야 합니다."),
+    LANGUAGE_NOT_VALID(BAD_REQUEST, "USER_400_8", "지원하지 않는 언어입니다."),
 
 
     INVALID_LOGIN_INFO(UNAUTHORIZED, "USER_401_1", "로그인 유저가 존재하지 않습니다."),
