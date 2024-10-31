@@ -66,4 +66,46 @@ public class UserExceptionHandler {
         log.error("NickNameDuplicateException Error", e);
         return CommonResponse.conflict(e.getErrorCode());
     }
+
+    @ExceptionHandler(PasswordNotValidExeption.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handlePasswordNotValidExeption(PasswordNotValidExeption e) {
+        log.error("PasswordNotValidExeption Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
+
+    @ExceptionHandler(UserIdNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handleUserIdNotValidException(UserIdNotValidException e) {
+        log.error("UserIdNotValidException Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
+
+    @ExceptionHandler(NicknameNotValidExeption.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handleNicknameNotValidExeption(NicknameNotValidExeption e) {
+        log.error("NicknameNotValidExeption Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
+
+    @ExceptionHandler(LanguageNotValidExeption.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handleLanguageNotValidExeption(LanguageNotValidExeption e) {
+        log.error("LanguageNotValidExeption Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
+
+    @ExceptionHandler(NotAllowedNicknameException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handleNotAllowedNicknameException(NotAllowedNicknameException e) {
+        log.error("NotAllowedNicknameException Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
+
+    @ExceptionHandler(NotAllowedUseridException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handleNotAllowedUseridException(NotAllowedUseridException e) {
+        log.error("NotAllowedUseridException Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
 }

@@ -50,6 +50,7 @@ public class MemberController {
     public CommonResponse<String> checkNickname(@RequestParam String nickname) {
         log.info("[UserController] 닉네임 중복 조회 >>>> nickname: {}", nickname);
         boolean isDuplicated = userService.checkNickname(nickname);
+
         String message = isDuplicated ? "이미 사용중인 닉네임입니다." : "사용 가능한 닉네임입니다.";
         return CommonResponse.ok(message, null);
     }

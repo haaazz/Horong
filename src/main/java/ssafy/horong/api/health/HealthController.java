@@ -1,12 +1,19 @@
 package ssafy.horong.api.health;
 
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import java.io.BufferedReader;
+import java.io.InputStream;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,8 +24,13 @@ import ssafy.horong.common.exception.data.DataNotFoundException;
 import ssafy.horong.common.exception.errorcode.GlobalErrorCode;
 import ssafy.horong.common.properties.WebClientProperties;
 import ssafy.horong.common.util.S3Util;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import javax.sql.DataSource;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.sql.Connection;
 import java.util.Objects;
@@ -35,6 +47,7 @@ public class HealthController {
     private final S3Util s3Util;
     private final WebClient webClient;
     private final WebClientProperties webClientProperties;
+    private final RedisTemplate<String, String> redisTemplateslang;
 
     @Operation(summary = "Redis 연결 확인", description = "Redis 서버와의 연결 상태를 확인합니다.")
     @GetMapping("/redis/check")
@@ -118,5 +131,31 @@ public class HealthController {
                 .orElseThrow(DataNotFoundException::new);
 
         return CommonResponse.ok("데이터 서버 연결 성공: " + response, null);
+    }
+
+    private static final String FORBIDDEN_WORDS_KEY = "forbiddenWords";
+
+    @Operation(summary = "금칙어 CSV 파일 업로드", description = "CSV 파일에서 금칙어를 읽어 Redis에 저장합니다.")
+    @PostMapping("/upload/csv")
+    public ResponseEntity<CommonResponse<String>> uploadForbiddenWordsFromCSV() {
+        log.info("[HealthController] 금칙어 CSV 파일 업로드");
+
+        Resource resource = new ClassPathResource("slang.csv");
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(resource.getInputStream()))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String forbiddenWord = line.trim();
+                if (!forbiddenWord.isEmpty()) {
+                    redisTemplateslang.opsForSet().add(FORBIDDEN_WORDS_KEY, forbiddenWord); // 금칙어 추가
+                    log.info("추가된 금칙어: {}", forbiddenWord);
+                }
+            }
+            return ResponseEntity.ok(CommonResponse.ok("금칙어가 성공적으로 추가되었습니다.", null));
+        } catch (Exception e) {
+            log.error("금칙어 추가 중 오류 발생", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CommonResponse.internalServerError(GlobalErrorCode.SERVER_ERROR));
+        }
     }
 }

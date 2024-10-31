@@ -71,6 +71,10 @@ dependencies {
 
     // HTML 검증
     implementation 'org.jsoup:jsoup:1.15.3' // 최신 버전으로 변경
+
+    //엘셀파일
+    implementation 'org.apache.poi:poi:5.2.3'
+    implementation 'org.apache.poi:poi-ooxml:5.2.3'
 }
 
 dependencyManagement {
