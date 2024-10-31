@@ -69,12 +69,12 @@ public class CommunityController {
         return CommonResponse.ok(response);
     }
 
-    @Operation(summary = "게시글 목록 조회", description = "게시글 목록을 조회하는 API입니다.")
-    @GetMapping("/posts")
-    public CommonResponse<Page<GetPostResponse>> getPostList(
+    @Operation(summary = "게시판별 게시글 목록 조회", description = "게시글 목록을 조회하는 API입니다.")
+    @GetMapping("/posts/{boardType}")
+    public CommonResponse<Page<GetPostResponse>> getPostList(@PathVariable String boardType,
             @Parameter(hidden = true) @PageableDefault(size = 10) Pageable pageable) {
         log.info("[CommunityController] 게시글 목록 조회");
-        Page<GetPostResponse> response = communityService.getPostList(pageable);
+        Page<GetPostResponse> response = communityService.getPostList(pageable, boardType);
         return CommonResponse.ok(response);
     }
 
