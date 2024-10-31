@@ -94,4 +94,18 @@ public class UserExceptionHandler {
         log.error("LanguageNotValidExeption Error", e);
         return CommonResponse.badRequest(e.getErrorCode());
     }
+
+    @ExceptionHandler(NotAllowedNicknameException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handleNotAllowedNicknameException(NotAllowedNicknameException e) {
+        log.error("NotAllowedNicknameException Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
+
+    @ExceptionHandler(NotAllowedUseridException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handleNotAllowedUseridException(NotAllowedUseridException e) {
+        log.error("NotAllowedUseridException Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
 }
