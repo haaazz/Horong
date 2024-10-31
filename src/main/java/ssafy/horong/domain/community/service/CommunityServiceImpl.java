@@ -188,10 +188,10 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     @Override
-    public Page<GetPostResponse> getPostList(Pageable pageable) {
+    public Page<GetPostResponse> getPostList(Pageable pageable, String boardType) {
         log.info("모든 게시글 조회 (페이지네이션)");
 
-        Page<Post> postPage = boardRepository.findAll(pageable);
+        Page<Post> postPage = boardRepository.findByType(BoardType.valueOf(boardType), pageable);
         Language language = getCurrentUser().getLanguage();
 
         List<GetPostResponse> postResponses = postPage.getContent().stream()

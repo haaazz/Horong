@@ -13,7 +13,7 @@ public interface CommunityService {
     void updatePost(UpdatePostCommand command);
     void deletePost(Long id);
     GetPostResponse getPostById(Long id);
-    Page<GetPostResponse> getPostList(Pageable pageable);
+    Page<GetPostResponse> getPostList(Pageable pageable, String boardType);
     Page<GetPostResponse> searchPosts(SearchPostsCommand command, Pageable pageable);
     void createComment(CreateCommentCommand command);
     void updateComment(UpdateCommentCommand command);
