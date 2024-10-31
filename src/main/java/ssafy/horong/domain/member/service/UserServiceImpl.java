@@ -23,6 +23,7 @@ import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.member.command.MemberSignupCommand;
 import ssafy.horong.domain.member.command.PasswordUpdateCommand;
 import ssafy.horong.domain.member.command.UpdateProfileCommand;
+import ssafy.horong.domain.member.common.Language;
 import ssafy.horong.domain.member.common.PasswordHistory;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.PasswordHistoryRepository;
@@ -47,11 +48,10 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserSignupResponse signupMember(MemberSignupCommand signupCommand) {
-        log.info("[UserService] 유저 회원가입");
 
-        if (isDuplicateUserId(signupCommand.userId())) {
-            throw new UserIdDuplicateException();
-        }
+        validateSignupCommand(signupCommand);
+
+        log.info("[UserService] 유저 회원가입");
 
         User userToSave = createNewUser(signupCommand);
         String encodedPassword = passwordEncoder.encode(signupCommand.password());
@@ -104,6 +104,8 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserDetailResponse updateMemberProfile(UpdateProfileCommand command) {
         log.info("[UserService] 유저 정보 변경");
+
+        validateUpdateProfileCommand(command);
         User currentUser = getCurrentLoggedInMember();
 
         MultipartFile profileImageFile = command.profileImagePath();
@@ -137,8 +139,22 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean checkNickname(String nickname) {
         log.info("[UserService] 닉네임 중복 체크");
+        if (isDuplicateNickname(nickname)) {
+            throw new NickNameDuplicateException();
+        }
         boolean isDuplicated = userRepository.existsByNickname(nickname);
         log.debug("[UserService] >>>> 닉네임: {}, 중복 여부: {}", nickname, isDuplicated);
+        return isDuplicated;
+    }
+
+    @Override
+    public boolean checkUserId(String userId) {
+        if (isDuplicateUserId(userId)) {
+            throw new UserIdDuplicateException();
+        }
+        log.info("[UserService] 아이디 중복 체크");
+        boolean isDuplicated = userRepository.existsByUserId(userId);
+        log.debug("[UserService] >>>> 아이디: {}, 중복 여부: {}", userId, isDuplicated);
         return isDuplicated;
     }
 
@@ -171,6 +187,12 @@ public class UserServiceImpl implements UserService {
         return user != null && !user.isDeleted();
     }
 
+    private boolean isDuplicateNickname(String nickname) {
+        User user = userRepository.findByNickname(nickname)
+                .orElse(null);
+
+        return user != null && !user.isDeleted();
+    }
 
     private User createNewUser(MemberSignupCommand command) {
         return User.builder()
@@ -226,7 +248,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private void verifyNewPassword(String newPassword, User user) {
-        if (newPassword.length() < 8 || !newPassword.matches(".*[!@#$%^&*].*")) {
+        if (newPassword.length() < 8 || 20 < newPassword.length() || !newPassword.matches(".*[!@#$%^&*].*")) {
             throw new InvalidPasswordException();
         }
 
@@ -242,5 +264,63 @@ public class UserServiceImpl implements UserService {
         Long userId = SecurityUtil.getLoginMemberId()
                 .orElseThrow(NotAuthenticatedException::new);
         return UserIdResponse.of(userId);
+    }
+
+    public void validateSignupCommand(MemberSignupCommand command) {
+        if (command.userId().length() < 2 || command.userId().length() > 16) {
+            throw new UserIdNotValidException();
+        }
+        if (!command.userId().matches("^[a-zA-Z0-9]+$")) {
+            throw new NotAllowedUseridException();
+        }
+        if (command.password().length() < 8 || command.password().length() > 20) {
+            throw new PasswordNotValidExeption();
+        }
+        if (!command.password().matches(".*[!@#$%^&*].*")){
+            throw new InvalidPasswordException();
+        }
+        if (command.nickname().length() < 2 || command.nickname().length() > 20) {
+            throw new NicknameNotValidExeption();
+        }
+        if (!command.nickname().matches("^[a-zA-Z0-9가-힣一-亜\u4e00-\u9fa5]+$")) {
+            throw new NotAllowedNicknameException();
+        }
+        if (!isValidLanguage(command.language())) {
+            throw new LanguageNotValidExeption();
+        }
+        if (isDuplicateUserId(command.userId())) {
+            throw new UserIdDuplicateException();
+        }
+        if (isDuplicateNickname(command.nickname())) {
+            throw new NickNameDuplicateException();
+        }
+    }
+
+    public void validateUpdateProfileCommand(UpdateProfileCommand command) {
+        if (command.nickname() != null) {
+            if (command.nickname().length() < 2 || command.nickname().length() > 20) {
+                throw new NicknameNotValidExeption();
+            }
+            if (isDuplicateNickname(command.nickname())) {
+                throw new NickNameDuplicateException();
+            }
+            if (!command.nickname().matches("^[a-zA-Z0-9가-힣一-亜\u4e00-\u9fa5]+$")) {
+                throw new NotAllowedNicknameException();
+            }
+        }
+        if (command.language() != null) {
+            if (!isValidLanguage(command.language())) {
+                throw new LanguageNotValidExeption();
+            }
+        }
+    }
+
+    private boolean isValidLanguage(Language language) {
+        for (Language lang : Language.values()) {
+            if (lang == language) {
+                return true;
+            }
+        }
+        return false;
     }
 }

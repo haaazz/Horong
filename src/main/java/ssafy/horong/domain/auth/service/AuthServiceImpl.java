@@ -39,7 +39,6 @@ import static ssafy.horong.common.constant.redis.KEY_PREFIX.REFRESH_TOKEN;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AuthServiceImpl implements AuthService {
-    private final JwtParser jwtParser;
     private final JwtProcessor jwtProcessor;
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
@@ -48,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse login(LoginCommand command) {
+
         LoginToken tokens;
         String userId = command.userId();
         String password = command.password();

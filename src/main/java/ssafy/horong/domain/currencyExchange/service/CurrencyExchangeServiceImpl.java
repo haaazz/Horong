@@ -16,10 +16,8 @@ public class CurrencyExchangeServiceImpl implements CurrencyExchangeService {
 
     @Override
     public List<CurrencyExchangeResponse> getCurrencyExchangeList() {
-        // 데이터베이스에서 모든 환전소 리스트를 가져옴
         List<CurrencyExchange> currencyExchangeList = currencyExchangeRepository.findAll();
 
-        // 환전소 리스트를 CurrencyExchangeResponse로 변환하여 반환
         return currencyExchangeList.stream()
                 .map(currencyExchange -> new CurrencyExchangeResponse(
                         currencyExchange.getId(),

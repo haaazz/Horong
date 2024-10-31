@@ -50,7 +50,17 @@ public class MemberController {
     public CommonResponse<String> checkNickname(@RequestParam String nickname) {
         log.info("[UserController] 닉네임 중복 조회 >>>> nickname: {}", nickname);
         boolean isDuplicated = userService.checkNickname(nickname);
+
         String message = isDuplicated ? "이미 사용중인 닉네임입니다." : "사용 가능한 닉네임입니다.";
+        return CommonResponse.ok(message, null);
+    }
+
+    @Operation(summary = "아이디 중복 조회", description = "아이디 중복 조회하는 API입니다.")
+    @GetMapping("/userId")
+    public CommonResponse<String> checkUserId(@RequestParam String userId) {
+        log.info("[UserController] 아이디 중복 조회 >>>> userId: {}", userId);
+        boolean isDuplicated = userService.checkUserId(userId);
+        String message = isDuplicated ? "이미 사용중인 아이디입니다." : "사용 가능한 아이디입니다.";
         return CommonResponse.ok(message, null);
     }
 

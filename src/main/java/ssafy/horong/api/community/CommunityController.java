@@ -16,7 +16,6 @@ import ssafy.horong.api.CommonResponse;
 import ssafy.horong.api.community.request.*;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
-import ssafy.horong.common.util.S3Util;
 import ssafy.horong.domain.community.service.CommunityService;
 
 import java.util.List;
@@ -28,7 +27,6 @@ import java.util.List;
 @Tag(name = "community", description = "커뮤니티")
 public class CommunityController {
     private final CommunityService communityService;
-    private final S3Util s3Util;
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 생성", description = """
@@ -92,7 +90,7 @@ public class CommunityController {
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "댓글 수정", description = "댓글을 수정하는 API입니다.")
     @PatchMapping("/{postId}/comments/{commentId}")
-    public CommonResponse<Void> updateComment(@PathVariable Long postId, @PathVariable Long commentId, @RequestBody @Validated UpdateCommentRequest request) {
+    public CommonResponse<Void> updateComment(@PathVariable Long commentId, @RequestBody @Validated UpdateCommentRequest request) {
         UpdateCommentRequest newRequest = new UpdateCommentRequest(commentId, request.contentByCountries());
         communityService.updateComment(newRequest.toCommand());
         return CommonResponse.ok("댓글이 수정되었습니다.", null);
@@ -101,7 +99,7 @@ public class CommunityController {
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "댓글 삭제", description = "댓글을 삭제하는 API입니다.")
     @DeleteMapping("/{postId}/comments/{commentId}")
-    public CommonResponse<Void> deleteComment(@PathVariable Long postId, @PathVariable Long commentId) {
+    public CommonResponse<Void> deleteComment(@PathVariable Long commentId) {
         communityService.deleteComment(commentId);
         return CommonResponse.ok("댓글이 삭제되었습니다.", null);
     }
