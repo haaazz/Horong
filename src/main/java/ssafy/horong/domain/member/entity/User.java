@@ -26,7 +26,7 @@ public class User {
     @Column(nullable = false, length = 16)
     private String userId;
 
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 20)
     private String nickname;
 
     @Column(nullable = false, length = 66)

@@ -49,27 +49,56 @@ public class UserServiceImpl implements UserService {
     public UserSignupResponse signupMember(MemberSignupCommand signupCommand) {
         log.info("[UserService] 유저 회원가입");
 
+        long startTime = System.currentTimeMillis();
+
+        // 1. 아이디 중복 확인
         if (isDuplicateUserId(signupCommand.userId())) {
             throw new UserIdDuplicateException();
         }
+        long afterDuplicateCheck = System.currentTimeMillis();
+        log.info("[Timing] 아이디 중복 확인 소요 시간: {} ms", afterDuplicateCheck - startTime);
 
+        // 2. 새로운 유저 생성 및 비밀번호 인코딩
         User userToSave = createNewUser(signupCommand);
         String encodedPassword = passwordEncoder.encode(signupCommand.password());
-        userToSave.signupMember(signupCommand,encodedPassword, signupCommand.language());
+        userToSave.signupMember(signupCommand, encodedPassword, signupCommand.language());
+
+        long afterUserCreation = System.currentTimeMillis();
+        log.info("[Timing] 유저 생성 및 비밀번호 인코딩 소요 시간: {} ms", afterUserCreation - afterDuplicateCheck);
+
+        // 3. 유저 저장
         userRepository.save(userToSave);
+        long afterUserSave = System.currentTimeMillis();
+        log.info("[Timing] 유저 저장 소요 시간: {} ms", afterUserSave - afterUserCreation);
+
+        // 4. 프로필 이미지 처리
         MultipartFile imageFile = signupCommand.imageUrl();
         String imageUrl = handleProfileImage(imageFile, userToSave.getId(), userToSave.getProfileImg());
         userToSave.setProfileImg(imageUrl);
-        userRepository.save(userToSave);
+        userRepository.save(userToSave); // 프로필 이미지 업데이트 후 다시 저장
+        long afterProfileImage = System.currentTimeMillis();
+        log.info("[Timing] 프로필 이미지 처리 및 저장 소요 시간: {} ms", afterProfileImage - afterUserSave);
+
+        // 5. 비밀번호 히스토리 저장
         passwordHistoryRepository.save(PasswordHistory.builder()
                 .user(userToSave)
                 .password(encodedPassword)
                 .build());
+        long afterPasswordHistory = System.currentTimeMillis();
+        log.info("[Timing] 비밀번호 히스토리 저장 소요 시간: {} ms", afterPasswordHistory - afterProfileImage);
 
+        // 6. 토큰 생성 및 저장
         try {
             String accessToken = jwtProcessor.generateAccessToken(userToSave);
             String refreshToken = jwtProcessor.generateRefreshToken(userToSave);
             jwtProcessor.saveRefreshToken(accessToken, refreshToken);
+
+            long afterTokenGeneration = System.currentTimeMillis();
+            log.info("[Timing] 토큰 생성 및 저장 소요 시간: {} ms", afterTokenGeneration - afterPasswordHistory);
+
+            long totalTime = afterTokenGeneration - startTime;
+            log.info("[Timing] 회원가입 전체 소요 시간: {} ms", totalTime);
+
             return UserSignupResponse.of(accessToken, refreshToken);
         } catch (Exception e) {
             throw new TokenSaveFailedException();
