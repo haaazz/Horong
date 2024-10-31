@@ -66,4 +66,26 @@ public class UserExceptionHandler {
         log.error("NickNameDuplicateException Error", e);
         return CommonResponse.conflict(e.getErrorCode());
     }
+
+    @ExceptionHandler(PasswordNotValidExeption.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handlePasswordNotValidExeption(PasswordNotValidExeption e) {
+        log.error("PasswordNotValidExeption Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
+
+    @ExceptionHandler(UserIdNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handleUserIdNotValidException(UserIdNotValidException e) {
+        log.error("UserIdNotValidException Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
+
+    @ExceptionHandler(NicknameNotValidExeption.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CommonResponse handleNicknameNotValidExeption(NicknameNotValidExeption e) {
+        log.error("NicknameNotValidExeption Error", e);
+        return CommonResponse.badRequest(e.getErrorCode());
+    }
+
 }

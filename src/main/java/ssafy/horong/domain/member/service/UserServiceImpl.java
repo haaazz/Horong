@@ -47,6 +47,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserSignupResponse signupMember(MemberSignupCommand signupCommand) {
+
+        validateSignupCommand(signupCommand);
+
         log.info("[UserService] 유저 회원가입");
 
         if (isDuplicateUserId(signupCommand.userId())) {
@@ -249,5 +252,17 @@ public class UserServiceImpl implements UserService {
         Long userId = SecurityUtil.getLoginMemberId()
                 .orElseThrow(NotAuthenticatedException::new);
         return UserIdResponse.of(userId);
+    }
+
+    public void validateSignupCommand(MemberSignupCommand command) {
+        if (command.userId().length() > 16) {
+            throw new UserIdNotValidException();
+        }
+        if (command.password().length() < 8 || command.password().length() > 20) {
+            throw new PasswordUsedException();
+        }
+        if (command.nickname().length() < 2 || command.nickname().length() > 20) {
+            throw new NicknameNotValidExeption();
+        }
     }
 }
