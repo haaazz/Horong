@@ -267,8 +267,11 @@ public class UserServiceImpl implements UserService {
     }
 
     public void validateSignupCommand(MemberSignupCommand command) {
-        if (command.userId().length() > 16) {
+        if (command.userId().length() < 2 || command.userId().length() > 16) {
             throw new UserIdNotValidException();
+        }
+        if (!command.userId().matches("^[a-zA-Z0-9]+$")) {
+            throw new NotAllowedUseridException();
         }
         if (command.password().length() < 8 || command.password().length() > 20) {
             throw new PasswordNotValidExeption();
@@ -278,6 +281,9 @@ public class UserServiceImpl implements UserService {
         }
         if (command.nickname().length() < 2 || command.nickname().length() > 20) {
             throw new NicknameNotValidExeption();
+        }
+        if (!command.nickname().matches("^[a-zA-Z0-9가-힣一-亜\u4e00-\u9fa5]+$")) {
+            throw new NotAllowedNicknameException();
         }
         if (!isValidLanguage(command.language())) {
             throw new LanguageNotValidExeption();
@@ -297,6 +303,9 @@ public class UserServiceImpl implements UserService {
             }
             if (isDuplicateNickname(command.nickname())) {
                 throw new NickNameDuplicateException();
+            }
+            if (!command.nickname().matches("^[a-zA-Z0-9가-힣一-亜\u4e00-\u9fa5]+$")) {
+                throw new NotAllowedNicknameException();
             }
         }
         if (command.language() != null) {
