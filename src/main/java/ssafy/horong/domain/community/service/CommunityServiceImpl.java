@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class CommunityServiceImpl implements CommunityService {
 
-    private final BoardRepository boardRepository;
+    private final BoardRepository postRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
@@ -86,7 +86,7 @@ public class CommunityServiceImpl implements CommunityService {
                 .toList();
 
         post.setContentByCountries(contentEntities); // Post에 ContentByLanguage 설정
-        boardRepository.save(post); // Post 저장
+        postRepository.save(post); // Post 저장
 
         savePostDocument(post, command.content()); // Elasticsearch에 PostDocument 저장
     }
@@ -113,7 +113,7 @@ public class CommunityServiceImpl implements CommunityService {
     @Transactional
     public void updatePost(UpdatePostCommand command) {
         validatePostCreateRequest(command.content());
-        Post post = boardRepository.findById(command.postId())
+        Post post = postRepository.findById(command.postId())
                 .orElseThrow(PostNotFoundException::new);
 
         post.setTitle(command.title());
@@ -140,7 +140,7 @@ public class CommunityServiceImpl implements CommunityService {
                 .toList();
 
         post.setContentByCountries(contentEntities); // Post에 ContentByLanguage 설정
-        boardRepository.save(post); // Post 저장
+        postRepository.save(post); // Post 저장
         postElasticsearchRepository.deleteById(String.valueOf(post.getId())); // Elasticsearch에서 기존 PostDocument 삭제
         savePostDocument(post, command.content()); // Elasticsearch에 새로운 PostDocument 저장
     }
@@ -174,7 +174,6 @@ public class CommunityServiceImpl implements CommunityService {
 
         List<GetCommentResponse> commentResponses = convertToCommentResponse(
                 post.getComments().stream()
-                        .filter(comment -> comment.getDeletedDate() == null)
                         .toList()
         );
 
@@ -191,7 +190,7 @@ public class CommunityServiceImpl implements CommunityService {
     public Page<GetPostResponse> getPostList(Pageable pageable, String boardType) {
         log.info("모든 게시글 조회 (페이지네이션)");
 
-        Page<Post> postPage = boardRepository.findByType(BoardType.valueOf(boardType), pageable);
+        Page<Post> postPage = postRepository.findByType(BoardType.valueOf(boardType), pageable);
         Language language = getCurrentUser().getLanguage();
 
         List<GetPostResponse> postResponses = postPage.getContent().stream()
@@ -202,11 +201,10 @@ public class CommunityServiceImpl implements CommunityService {
                             .findFirst()
                             .map(ContentByLanguage::getContent)
                             .orElseThrow(PostNotFoundException::new);
+                    log.info("post댓글확인 {}", post.getComments());
 
                     List<GetCommentResponse> commentResponses = convertToCommentResponse(
-                            post.getComments().stream()
-                                    .filter(comment -> comment.getDeletedDate() == null)
-                                    .toList()
+                            post.getComments().stream().toList()
                     );
 
                     return new GetPostResponse(
@@ -282,7 +280,7 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     private Post getPost(Long id) {
-        return boardRepository.findById(id)
+        return postRepository.findById(id)
                 .orElseThrow(PostNotFoundException::new);
     }
 
@@ -306,8 +304,18 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     private List<GetCommentResponse> convertToCommentResponse(List<Comment> comments) {
+        log.info("댓글확인 {}", comments);
         return comments.stream()
                 .map(comment -> {
+                    // 댓글이 삭제된 경우 처리
+                    if (comment.getDeletedDate() != null) {
+                        return new GetCommentResponse(
+                                null, // 삭제된 댓글의 ID
+                                "deleted", // 삭제된 닉네임
+                                "삭제된 댓글입니다." // 삭제된 댓글 내용
+                        );
+                    }
+
                     String content = comment.getContentByCountries().stream()
                             .filter(c -> c.getLanguage() == getCurrentUser().getLanguage())
                             .findFirst()
