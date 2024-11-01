@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
 import ssafy.horong.domain.community.command.*;
+import ssafy.horong.domain.community.entity.Notification;
 
 import java.util.List;
 

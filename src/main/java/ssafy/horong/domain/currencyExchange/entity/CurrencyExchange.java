@@ -26,7 +26,7 @@ public class CurrencyExchange {
     @Column(name = "business_hours", nullable = false, length = 100)
     private String businessHours;  // 영업 시간
 
-    @Column(name = "language", nullable = false, length = 200)
+    @Column(name = "description", nullable = false, length = 200)
     private String description;  // 설명
 
     @Column(name = "phone", nullable = false, length = 14)
