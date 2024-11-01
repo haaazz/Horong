@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import ssafy.horong.domain.member.common.MemberRole;
+import ssafy.horong.domain.member.entity.User;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -22,6 +23,16 @@ public class SecurityUtil {
             return Optional.empty();
         }
         return Optional.of(memberId);
+    }
+
+    public static Optional<User> getLoginUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null ||
+                !authentication.isAuthenticated() ||
+                !(authentication.getPrincipal() instanceof User user)) {
+            return Optional.empty();
+        }
+        return Optional.of(user);
     }
 
     public static Optional<MemberRole> getLoginMemberRole() {
