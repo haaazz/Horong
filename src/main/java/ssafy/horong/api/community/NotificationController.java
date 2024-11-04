@@ -1,6 +1,8 @@
 package ssafy.horong.api.community;
 
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ssafy.horong.api.CommonResponse;
 import ssafy.horong.domain.community.entity.Notification;
@@ -13,12 +15,16 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "알림 읽음 처리", description = "알림을 읽음 처리합니다.")
     @PostMapping("/{notificationId}")
     public CommonResponse<Void> markAsRead(@PathVariable Long notificationId, @RequestParam Notification.NotificationType type) {
         notificationService.markAsRead(notificationId, type);
         return CommonResponse.ok("알림이 읽음 처리되었습니다.", null);
     }
 
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "알림 전송", description = "알림을 전송합니다.")
     @PostMapping("/send")
     public CommonResponse<Void> sendNotification(@RequestParam String message, @RequestParam Long userId) {
         notificationService.sendNotificationToUser(message, userId);

@@ -2,6 +2,7 @@ package ssafy.horong.domain.member.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ import ssafy.horong.domain.member.repository.UserRepository;
 import ssafy.horong.common.exception.User.*;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 
 @Slf4j
@@ -44,6 +46,9 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final S3Util s3Util;
     private final PasswordHistoryRepository passwordHistoryRepository;
+    private final RedisTemplate<String, String> redisTemplateslang;
+    private static final String FORBIDDEN_WORDS_KEY = "forbiddenWords";
+
 
     @Override
     @Transactional
@@ -300,16 +305,22 @@ public class UserServiceImpl implements UserService {
     }
 
     public void validateSignupCommand(MemberSignupCommand command) {
+        // Redis에서 금칙어 목록 가져오기
+        Set<String> forbiddenWords = redisTemplateslang.opsForSet().members(FORBIDDEN_WORDS_KEY);
+
         if (command.userId().length() < 2 || command.userId().length() > 16) {
             throw new UserIdNotValidException();
         }
         if (!command.userId().matches("^[a-zA-Z0-9]+$")) {
             throw new NotAllowedUseridException();
         }
+        if (containsForbiddenWord(command.userId(), forbiddenWords)) {
+            throw new ForbiddenWordContainedException();
+        }
         if (command.password().length() < 8 || command.password().length() > 20) {
             throw new PasswordNotValidExeption();
         }
-        if (!command.password().matches(".*[!@#$%^&*].*")){
+        if (!command.password().matches(".*[!@#$%^&*].*")) {
             throw new InvalidPasswordException();
         }
         if (command.nickname().length() < 2 || command.nickname().length() > 20) {
@@ -317,6 +328,9 @@ public class UserServiceImpl implements UserService {
         }
         if (!command.nickname().matches("^[a-zA-Z0-9가-힣一-亜\u4e00-\u9fa5]+$")) {
             throw new NotAllowedNicknameException();
+        }
+        if (containsForbiddenWord(command.nickname(), forbiddenWords)) {
+            throw new ForbiddenWordContainedException();
         }
         if (!isValidLanguage(command.language())) {
             throw new LanguageNotValidExeption();
@@ -330,6 +344,7 @@ public class UserServiceImpl implements UserService {
     }
 
     public void validateUpdateProfileCommand(UpdateProfileCommand command) {
+        Set<String> forbiddenWords = redisTemplateslang.opsForSet().members(FORBIDDEN_WORDS_KEY);
         if (command.nickname() != null) {
             if (command.nickname().length() < 2 || command.nickname().length() > 20) {
                 throw new NicknameNotValidExeption();
@@ -339,6 +354,9 @@ public class UserServiceImpl implements UserService {
             }
             if (!command.nickname().matches("^[a-zA-Z0-9가-힣一-亜\u4e00-\u9fa5]+$")) {
                 throw new NotAllowedNicknameException();
+            }
+            if (containsForbiddenWord(command.nickname(), forbiddenWords)) {
+                throw new ForbiddenWordContainedException();
             }
         }
         if (command.language() != null) {
@@ -351,6 +369,19 @@ public class UserServiceImpl implements UserService {
     private boolean isValidLanguage(Language language) {
         for (Language lang : Language.values()) {
             if (lang == language) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 금칙어가 포함되어 있는지 확인하는 메서드
+    private boolean containsForbiddenWord(String text, Set<String> forbiddenWords) {
+        if (forbiddenWords == null || forbiddenWords.isEmpty()) {
+            return false;
+        }
+        for (String word : forbiddenWords) {
+            if (text.contains(word)) {
                 return true;
             }
         }

@@ -511,5 +511,4 @@ public class CommunityServiceImpl implements CommunityService {
         emitters.removeAll(deadEmitters);
         log.info("알림이 전송되었습니다. 사용자 ID: {}, 메시지: {}", userId, message);
     }
-
 }
