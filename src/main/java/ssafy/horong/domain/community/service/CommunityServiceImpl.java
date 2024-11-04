@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import ssafy.horong.api.community.NotificationController;
 import ssafy.horong.api.community.request.CreateContentByLanguageRequest;
+import ssafy.horong.api.community.response.GetAllMessageListResponse;
 import ssafy.horong.api.community.response.GetCommentResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
@@ -34,10 +35,7 @@ import ssafy.horong.domain.community.elastic.PostElasticsearchRepository;
 import ssafy.horong.domain.community.entity.Notification;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 import java.io.IOException;
@@ -53,7 +51,6 @@ public class CommunityServiceImpl implements CommunityService {
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
     private final PostElasticsearchRepository postElasticsearchRepository;
-    private final NotificationController notificationController;
     private final NotificationRepository notificationRepository;
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
@@ -396,6 +393,43 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     @Override
+    public List<GetAllMessageListResponse> getAllMessageList() {
+        List<Message> messages = messageRepository.findByReceiverWithContents(getCurrentUser());
+        log.info("모든 메시지 조회: {}", messages);
+
+        return messages.stream()
+                .collect(Collectors.groupingBy(Message::getSender))
+                .entrySet().stream()
+                .map(entry -> {
+                    User sender = entry.getKey();
+                    List<Message> senderMessages = entry.getValue();
+
+                    Message lastMessage = senderMessages.get(senderMessages.size() - 1);
+                    String lastContent = lastMessage.getContentByCountries().stream()
+                            .filter(c -> c.getLanguage() == getCurrentUser().getLanguage())
+                            .findFirst()
+                            .map(ContentByLanguage::getContent)
+                            .orElse(null);
+
+                    return new GetAllMessageListResponse(
+                            (long) senderMessages.size(),
+                            lastContent,
+                            sender.getNickname()
+                    );
+                })
+                .sorted(Comparator.comparing((GetAllMessageListResponse response) -> {
+                    String senderNickname = response.senderNickname();
+                    return messages.stream()
+                            .filter(m -> m.getSender().getNickname().equals(senderNickname))
+                            .max(Comparator.comparing(Message::getCreatedAt))
+                            .map(Message::getCreatedAt)
+                            .orElse(LocalDateTime.MIN);
+                }).reversed())
+                .toList();
+    }
+
+
+    @Override
     public List<GetMessageListResponse> getMessageList(GetMessageListCommand command) {
         List<Message> messages = messageRepository.findBySenderIdAndreceiver(command.senderId(), getCurrentUser().getId());
         Language userLanguage = getCurrentUser().getLanguage();
@@ -494,21 +528,5 @@ public class CommunityServiceImpl implements CommunityService {
                     sendNotificationToUser("메시지 알림: " + notification.getMessage(), user.getId())
             );
         });
-    }
-
-    @Transactional
-    public void sendNotificationToUser(String message, Long userId) {
-        List<SseEmitter> deadEmitters = new ArrayList<>();
-        emitters.forEach(emitter -> {
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("notification")
-                        .data("User ID: " + userId + " - " + message));
-            } catch (IOException e) {
-                deadEmitters.add(emitter);
-            }
-        });
-        emitters.removeAll(deadEmitters);
-        log.info("알림이 전송되었습니다. 사용자 ID: {}, 메시지: {}", userId, message);
     }
 }
