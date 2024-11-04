@@ -2,8 +2,6 @@ package ssafy.horong.common.util;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -58,7 +56,7 @@ public class S3Util {
         return location + fileName + extension;
     }
 
-    public String uploadImageToS3(MultipartFile imageFile, String fileName, String location) {
+    public String uploadToS3(MultipartFile imageFile, String fileName, String location) {
         String s3FileName = getS3FileName(imageFile, fileName, location); // S3에 업로드할 파일명 생성
         try (InputStream inputStream = imageFile.getInputStream()) { // try-with-resources 사용
             amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), s3FileName, inputStream, null));
