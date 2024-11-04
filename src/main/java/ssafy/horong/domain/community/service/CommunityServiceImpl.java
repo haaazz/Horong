@@ -61,37 +61,48 @@ public class CommunityServiceImpl implements CommunityService {
 
         // Post 엔티티 생성
         Post post = Post.builder()
-                .title(command.title())
                 .type(command.boardType())
                 .author(getCurrentUser())
                 .build();
 
-        // ContentByLanguage 리스트 변환
-        List<ContentByLanguage> contentEntities = command.content().stream()
-                .map(c -> {
-                    // ContentImage 생성
-                    List<ContentImage> contentImages = c.contentImageRequest().stream()
-                            .map(ContentImageRequest::imageUrl)
-                            .map(imageUrl -> ContentImage.builder().imageUrl(imageUrl).build())
-                            .toList();
+        List<ContentImage> contentImages = command.contentImageRequest().stream()
+                .map(ContentImageRequest::imageUrl)
+                .map(imageUrl -> ContentImage.builder().imageUrl(imageUrl).build())
+                .toList();
 
-                    // ContentByLanguage 생성
-                    ContentByLanguage contentByLanguage = ContentByLanguage.builder()
-                            .content(c.content())
+        // ContentByLanguage 리스트 변환 (내용과 제목 모두 처리)
+        List<ContentByLanguage> contentEntities = command.content().stream()
+                .flatMap(c -> {
+                    // 제목 ContentByLanguage 생성
+                    ContentByLanguage titleEntity = ContentByLanguage.builder()
+                            .content(c.title()) // 제목
                             .isOriginal(c.isOriginal())
                             .language(c.language())
-                            .contentType(ContentByLanguage.ContentType.POST)
-                            .contentImages(contentImages)
+                            .contentType(ContentByLanguage.ContentType.TITLE)
                             .build();
+                    titleEntity.setPost(post); // Post 설정
+
+                    // 내용 ContentByLanguage 생성
+
+
+                    ContentByLanguage contentEntity = ContentByLanguage.builder()
+                            .content(c.content()) // 내용
+                            .isOriginal(c.isOriginal())
+                            .language(c.language())
+                            .contentType(ContentByLanguage.ContentType.CONTENT)
+                            .contentImages(contentImages) // 이미지 포함
+                            .build();
+                    contentEntity.setPost(post); // Post 설정
 
                     // ContentImage와 ContentByLanguage 관계 설정
-                    contentImages.forEach(contentImage -> contentImage.setContent(contentByLanguage));
-                    contentByLanguage.setPost(post); // Post 설정
+                    contentImages.forEach(contentImage -> contentImage.setContent(contentEntity));
 
-                    return contentByLanguage;
+                    // 제목과 내용을 모두 포함하는 스트림 반환
+                    return Stream.of(titleEntity, contentEntity);
                 })
                 .toList();
 
+        // Post에 ContentByLanguage 설정
         post.setContentByCountries(contentEntities); // Post에 ContentByLanguage 설정
         postRepository.save(post); // Post 저장
 
@@ -101,21 +112,37 @@ public class CommunityServiceImpl implements CommunityService {
     private void savePostDocument(Post post, List<CreateContentByLanguageRequest> contentByCountries) {
         PostDocument postDocument = PostDocument.builder()
                 .postId(post.getId())
-                .title(post.getTitle())
                 .author(post.getAuthor().getNickname())
                 .build();
 
         contentByCountries.forEach(contentByLanguage -> {
             String language = contentByLanguage.language().name();
+
+            // 언어에 따라 제목 및 콘텐츠 설정
             switch (language) {
-                case "KOREAN" -> postDocument.setContentKo(contentByLanguage.content());
-                case "CHINESE" -> postDocument.setContentZh(contentByLanguage.content());
-                case "JAPANESE" -> postDocument.setContentJa(contentByLanguage.content());
-                case "ENGLISH" -> postDocument.setContentEn(contentByLanguage.content());
+                case "KOREAN" -> {
+                    postDocument.setTitleKo(contentByLanguage.title());
+                    postDocument.setContentKo(contentByLanguage.content());
+                }
+                case "CHINESE" -> {
+                    postDocument.setTitleZh(contentByLanguage.title());
+                    postDocument.setContentZh(contentByLanguage.content());
+                }
+                case "JAPANESE" -> {
+                    postDocument.setTitleJa(contentByLanguage.title());
+                    postDocument.setContentJa(contentByLanguage.content());
+                }
+                case "ENGLISH" -> {
+                    postDocument.setTitleEn(contentByLanguage.title());
+                    postDocument.setContentEn(contentByLanguage.content());
+                }
             }
         });
-        postElasticsearchRepository.save(postDocument);  // Elasticsearch에 PostDocument 저장
+
+        // Elasticsearch에 PostDocument 저장
+        postElasticsearchRepository.save(postDocument);
     }
+
 
     @Transactional
     public void updatePost(UpdatePostCommand command) {
@@ -123,20 +150,19 @@ public class CommunityServiceImpl implements CommunityService {
         Post post = postRepository.findById(command.postId())
                 .orElseThrow(PostNotFoundException::new);
 
-        post.setTitle(command.title());
+        List<ContentImage> contentImages = command.contentImageRequest().stream()
+                .map(ContentImageRequest::imageUrl)
+                .map(imageUrl -> ContentImage.builder().imageUrl(imageUrl).build())
+                .toList();
 
         List<ContentByLanguage> contentEntities = command.content().stream()
                 .map(c -> {
-                    List<ContentImage> contentImages = c.contentImageRequest().stream()
-                            .map(ContentImageRequest::imageUrl)
-                            .map(imageUrl -> ContentImage.builder().imageUrl(imageUrl).build())
-                            .toList();
 
                     ContentByLanguage contentByLanguage = ContentByLanguage.builder()
                             .content(c.content())
                             .isOriginal(c.isOriginal())
                             .language(c.language())
-                            .contentType(ContentByLanguage.ContentType.POST)
+                            .contentType(ContentByLanguage.ContentType.CONTENT)
                             .contentImages(contentImages)
                             .post(post)
                             .build();
@@ -179,13 +205,19 @@ public class CommunityServiceImpl implements CommunityService {
                 .map(ContentByLanguage::getContent)
                 .orElseThrow(PostNotFoundException::new);
 
+        String title = post.getContentByCountries().stream()
+                .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.TITLE)
+                .findFirst()
+                .map(ContentByLanguage::getContent)
+                .orElseThrow(PostNotFoundException::new);
+
         List<GetCommentResponse> commentResponses = convertToCommentResponse(
                 post.getComments().stream().toList()
         );
 
         return new GetPostResponse(
                 post.getId(),
-                post.getTitle(),
+                title,
                 post.getAuthor().getNickname(),
                 content,
                 commentResponses
@@ -209,13 +241,19 @@ public class CommunityServiceImpl implements CommunityService {
                             .orElseThrow(PostNotFoundException::new);
                     log.info("post댓글확인 {}", post.getComments());
 
+                    String title = post.getContentByCountries().stream()
+                            .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.TITLE)
+                            .findFirst()
+                            .map(ContentByLanguage::getContent)
+                            .orElseThrow(PostNotFoundException::new);
+
                     List<GetCommentResponse> commentResponses = convertToCommentResponse(
                             post.getComments().stream().toList()
                     );
 
                     return new GetPostResponse(
                             post.getId(),
-                            post.getTitle(),
+                            title,
                             post.getAuthor().getNickname(),
                             content,
                             commentResponses
@@ -241,7 +279,6 @@ public class CommunityServiceImpl implements CommunityService {
                         .language(contentRequest.language())
                         .content(contentRequest.content())
                         .isOriginal(contentRequest.isOriginal())
-                        .contentType(ContentByLanguage.ContentType.COMMENT)
                         .comment(comment)
                         .build())
                 .toList();
@@ -253,7 +290,7 @@ public class CommunityServiceImpl implements CommunityService {
         if (!postAuthor.equals(getCurrentUser())) {
             Notification notification = Notification.builder()
                     .user(postAuthor)
-                    .message(post.getTitle() + "게시글에 새로운 댓글이 작성되었습니다: " + command.contentByCountries().get(0).content())
+                    .message("게시글에 새로운 댓글이 작성되었습니다: " + command.contentByCountries().get(0).content())
                     .isRead(false)
                     .createdAt(LocalDateTime.now())
                     .build();
@@ -306,7 +343,6 @@ public class CommunityServiceImpl implements CommunityService {
                         .language(contentRequest.language())
                         .content(contentRequest.content())
                         .isOriginal(contentRequest.isOriginal())
-                        .contentType(ContentByLanguage.ContentType.COMMENT)
                         .build();
                 comment.getContentByCountries().add(content);
             });
@@ -375,7 +411,6 @@ public class CommunityServiceImpl implements CommunityService {
                 .map(contentByLanguageCommand -> ContentByLanguage.builder()
                         .language(contentByLanguageCommand.language())
                         .content(contentByLanguageCommand.content())
-                        .contentType(ContentByLanguage.ContentType.MESSAGE)
                         .build())
                 .toList();
 
@@ -425,6 +460,10 @@ public class CommunityServiceImpl implements CommunityService {
                     User sender = entry.getKey();
                     List<Message> senderMessages = entry.getValue();
 
+                    long unreadCount = senderMessages.stream()
+                            .filter(message -> !message.isRead()) // 읽지 않은 메시지만 필터링
+                            .count();
+
                     Message lastMessage = senderMessages.get(senderMessages.size() - 1);
                     String lastContent = lastMessage.getContentByCountries().stream()
                             .filter(c -> c.getLanguage() == getCurrentUser().getLanguage())
@@ -433,7 +472,7 @@ public class CommunityServiceImpl implements CommunityService {
                             .orElse(null);
 
                     return new GetAllMessageListResponse(
-                            (long) senderMessages.size(),
+                            unreadCount,
                             lastContent,
                             sender.getNickname()
                     );
@@ -449,6 +488,7 @@ public class CommunityServiceImpl implements CommunityService {
                 .toList();
     }
 
+    @Transactional
     @Override
     public List<GetMessageListResponse> getMessageList(GetMessageListCommand command) {
         List<Message> messages = messageRepository.findBySenderIdAndreceiver(command.senderId(), getCurrentUser().getId());
@@ -462,6 +502,10 @@ public class CommunityServiceImpl implements CommunityService {
                             .map(ContentByLanguage::getContent)
                             .orElse("기본 메시지 내용");
 
+                    message.readMessage();
+                    messageRepository.save(message);
+
+                    log.info("읽음여부 {}, {}" , message.isRead(), message.getId());
                     return new GetMessageListResponse(content, message.getSender().getNickname());
                 })
                 .toList();
@@ -483,25 +527,35 @@ public class CommunityServiceImpl implements CommunityService {
         String userLanguage = getCurrentUser().getLanguage().name();
 
         Set<PostDocument> uniqueDocuments = Arrays.stream(terms)
-                .flatMap(term -> postElasticsearchRepository
-                        .findByTitleOrAuthorOrContentKoOrContentZhOrContentJaOrContentEn(term, term, term, term, term, term)
-                        .stream())
+                .flatMap(term -> postElasticsearchRepository.findByTitleKoOrTitleZhOrTitleJaOrTitleEnOrAuthorOrContentKoOrContentZhOrContentJaOrContentEn(
+                        term, term, term, term, term, term, term, term,  term
+                ).stream())
                 .collect(Collectors.toSet());
 
         log.info("Elasticsearch 검색 결과: {}", uniqueDocuments);
+
+        // 검색 결과를 GetPostResponse로 변환
         List<GetPostResponse> postResponses = uniqueDocuments.stream()
                 .map(postDocument -> {
+                    // 사용자 언어에 따른 콘텐츠 선택
                     String content = switch (userLanguage) {
                         case "KOREAN" -> postDocument.getContentKo();
                         case "CHINESE" -> postDocument.getContentZh();
                         case "JAPANESE" -> postDocument.getContentJa();
                         case "ENGLISH" -> postDocument.getContentEn();
-                        default -> "";
+                        default -> ""; // 언어가 유효하지 않으면 빈 문자열
+                    };
+                    String title = switch (userLanguage) {
+                        case "KOREAN" -> postDocument.getTitleKo();
+                        case "CHINESE" -> postDocument.getTitleZh();
+                        case "JAPANESE" -> postDocument.getTitleJa();
+                        case "ENGLISH" -> postDocument.getTitleEn();
+                        default -> ""; // 언어가 유효하지 않으면 빈 문자열
                     };
 
                     return new GetPostResponse(
                             postDocument.getPostId(),
-                            postDocument.getTitle(),
+                            title,
                             postDocument.getAuthor(),
                             content,
                             List.of()
@@ -509,8 +563,10 @@ public class CommunityServiceImpl implements CommunityService {
                 })
                 .toList();
 
-        return new PageImpl<>(postResponses, pageable, postResponses.size());
+        // 결과를 페이지 형태로 반환
+        return new PageImpl<>(postResponses, pageable, uniqueDocuments.size());
     }
+
 
     public String saveImageToS3(MultipartFile file) {
         return s3Util.uploadImageToS3(file, UUID.randomUUID().toString(), "community");

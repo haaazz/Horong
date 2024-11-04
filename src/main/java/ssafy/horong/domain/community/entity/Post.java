@@ -22,9 +22,6 @@ public class Post {
     @Enumerated(EnumType.STRING)
     private BoardType type;
 
-    @Column(length = 20, nullable = false)
-    private String title;
-
     @ElementCollection
     @CollectionTable(name = "post_images", joinColumns = @JoinColumn(name = "post_id"))
     @Column(name = "image_url")
