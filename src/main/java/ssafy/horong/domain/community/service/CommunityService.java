@@ -2,6 +2,8 @@ package ssafy.horong.domain.community.service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
+import ssafy.horong.api.community.response.GetAllMessageListResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
 import ssafy.horong.domain.community.command.*;
@@ -21,4 +23,6 @@ public interface CommunityService {
     void deleteComment(Long commentId);
     void sendMessage(SendMessageCommand command);
     List<GetMessageListResponse> getMessageList(GetMessageListCommand command);
+    List<GetAllMessageListResponse> getAllMessageList();
+    String saveImageToS3(MultipartFile file);
 }

@@ -44,7 +44,7 @@ public class S3Util {
         }
     }
 
-    private static String getS3FileName(MultipartFile image, String text, String location) {
+    private static String getS3FileName(MultipartFile image, String fileName, String location) {
         String originalFilename = image.getOriginalFilename();
         String extension = "";
 
@@ -54,12 +54,12 @@ public class S3Util {
 
         validateFileExtension(extension);
 
-        return location + text + extension;
+        return location + fileName + extension;
     }
 
-    public String uploadImageToS3(MultipartFile imageFile, String text, String location) {
+    public String uploadImageToS3(MultipartFile imageFile, String fileNmae, String location) {
         try {
-            String fileName = getS3FileName(imageFile, text, location);
+            String fileName = getS3FileName(imageFile, fileNmae, location);
             amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), fileName, imageFile.getInputStream(), null));
             return fileName; // 객체 키만 반환
         } catch (IOException e) {

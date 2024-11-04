@@ -9,14 +9,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import ssafy.horong.api.community.NotificationController;
+import org.jsoup.Jsoup;
+import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.api.community.request.CreateContentByLanguageRequest;
+import ssafy.horong.api.community.response.GetAllMessageListResponse;
 import ssafy.horong.api.community.response.GetCommentResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
-import org.jsoup.Jsoup;
 import ssafy.horong.common.exception.Board.*;
+import ssafy.horong.common.util.NotificationUtil; // NotificationUtil 추가
+import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.elastic.PostDocument;
@@ -31,16 +33,11 @@ import ssafy.horong.domain.member.common.MemberRole;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 import ssafy.horong.domain.community.elastic.PostElasticsearchRepository;
-import ssafy.horong.domain.community.entity.Notification;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.io.IOException;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -53,9 +50,9 @@ public class CommunityServiceImpl implements CommunityService {
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
     private final PostElasticsearchRepository postElasticsearchRepository;
-    private final NotificationController notificationController;
     private final NotificationRepository notificationRepository;
-    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final NotificationUtil notificationUtil; // NotificationUtil 추가
+    private final S3Util s3Util;
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -263,10 +260,25 @@ public class CommunityServiceImpl implements CommunityService {
             notificationRepository.save(notification);
         }
 
-        List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(post.getAuthor(), Notification.NotificationType.COMMENT);
-        unreadCommentNotifications.forEach(notification ->
-                sendNotificationToUser("댓글 알림: " + notification.getMessage(), post.getAuthor().getId())
-        );
+        // 읽지 않은 댓글과 메시지를 각각 리스트로 가져옴
+        List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(postAuthor, Notification.NotificationType.COMMENT);
+        List<Notification> unreadMessageNotifications = notificationRepository.findByUserAndIsReadFalseAndType(postAuthor, Notification.NotificationType.MESSAGE);
+
+        // 각각의 알림 메시지를 문자열 리스트로 변환
+        List<String> unreadComments = unreadCommentNotifications.stream()
+                .map(Notification::getMessage)
+                .toList();
+
+        List<String> unreadMessages = unreadMessageNotifications.stream()
+                .map(Notification::getMessage)
+                .toList();
+
+        // 두 리스트를 병합하여 하나의 리스트로 만듦
+        List<String> combinedNotifications = Stream.concat(unreadComments.stream(), unreadMessages.stream())
+                .collect(Collectors.toList());
+
+        // 병합된 리스트를 전송
+        notificationUtil.sendNotificationToUser(combinedNotifications, postAuthor.getId()); // 수정된 부분
     }
 
     @Override
@@ -380,19 +392,61 @@ public class CommunityServiceImpl implements CommunityService {
         contentByCountries.forEach(contentByLanguage -> contentByLanguage.setMessage(message));
         messageRepository.save(message);
 
-        // 메시지 전송 시 수신자에게 알림 전송
-        Notification notification = Notification.builder()
-                .user(receiver)
-                .message(getCurrentUser().getNickname() + "으로부터 새 메시지가 도착했습니다.")
-                .isRead(false)
-                .createdAt(LocalDateTime.now())
-                .build();
-        notificationRepository.save(notification);
+        // 읽지 않은 댓글과 메시지를 각각 리스트로 가져옴
+        List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(receiver, Notification.NotificationType.COMMENT);
+        List<Notification> unreadMessageNotifications = notificationRepository.findByUserAndIsReadFalseAndType(receiver, Notification.NotificationType.MESSAGE);
 
-        List<Notification> unreadNotifications = notificationRepository.findByUserAndIsReadFalse(receiver);
-        unreadNotifications.forEach(unreadNotification ->
-                sendNotificationToUser("알림: " + unreadNotification.getMessage(), receiver.getId())
-        );
+        // 각각의 알림 메시지를 문자열 리스트로 변환
+        List<String> unreadComments = unreadCommentNotifications.stream()
+                .map(Notification::getMessage)
+                .toList();
+
+        List<String> unreadMessages = unreadMessageNotifications.stream()
+                .map(Notification::getMessage)
+                .toList();
+
+        // 두 리스트를 병합하여 하나의 리스트로 만듦
+        List<String> combinedNotifications = Stream.concat(unreadComments.stream(), unreadMessages.stream())
+                .collect(Collectors.toList());
+
+        // 병합된 리스트를 전송
+        notificationUtil.sendNotificationToUser(combinedNotifications, receiver.getId()); // 수정된 부분
+    }
+
+    @Override
+    public List<GetAllMessageListResponse> getAllMessageList() {
+        List<Message> messages = messageRepository.findByReceiverWithContents(getCurrentUser());
+        log.info("모든 메시지 조회: {}", messages);
+
+        return messages.stream()
+                .collect(Collectors.groupingBy(Message::getSender))
+                .entrySet().stream()
+                .map(entry -> {
+                    User sender = entry.getKey();
+                    List<Message> senderMessages = entry.getValue();
+
+                    Message lastMessage = senderMessages.get(senderMessages.size() - 1);
+                    String lastContent = lastMessage.getContentByCountries().stream()
+                            .filter(c -> c.getLanguage() == getCurrentUser().getLanguage())
+                            .findFirst()
+                            .map(ContentByLanguage::getContent)
+                            .orElse(null);
+
+                    return new GetAllMessageListResponse(
+                            (long) senderMessages.size(),
+                            lastContent,
+                            sender.getNickname()
+                    );
+                })
+                .sorted(Comparator.comparing((GetAllMessageListResponse response) -> {
+                    String senderNickname = response.senderNickname();
+                    return messages.stream()
+                            .filter(m -> m.getSender().getNickname().equals(senderNickname))
+                            .max(Comparator.comparing(Message::getCreatedAt))
+                            .map(Message::getCreatedAt)
+                            .orElse(LocalDateTime.MIN);
+                }).reversed())
+                .toList();
     }
 
     @Override
@@ -458,6 +512,10 @@ public class CommunityServiceImpl implements CommunityService {
         return new PageImpl<>(postResponses, pageable, postResponses.size());
     }
 
+    public String saveImageToS3(MultipartFile file) {
+        return s3Util.uploadImageToS3(file, UUID.randomUUID().toString(), "community");
+    }
+
     public void validatePostCreateRequest(List<CreateContentByLanguageRequest> contents) {
         for (CreateContentByLanguageRequest request : contents) {
             // 모든 HTML 태그와 속성을 제거하여 순수 텍스트만 남김
@@ -479,36 +537,5 @@ public class CommunityServiceImpl implements CommunityService {
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&#x27;");
-    }
-
-    public void sendUnreadNotifications() {
-        List<User> users = userRepository.findAll();
-        users.forEach(user -> {
-            List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(user, Notification.NotificationType.COMMENT);
-            unreadCommentNotifications.forEach(notification ->
-                    sendNotificationToUser("댓글 알림: " + notification.getMessage(), user.getId())
-            );
-
-            List<Notification> unreadMessageNotifications = notificationRepository.findByUserAndIsReadFalseAndType(user, Notification.NotificationType.MESSAGE);
-            unreadMessageNotifications.forEach(notification ->
-                    sendNotificationToUser("메시지 알림: " + notification.getMessage(), user.getId())
-            );
-        });
-    }
-
-    @Transactional
-    public void sendNotificationToUser(String message, Long userId) {
-        List<SseEmitter> deadEmitters = new ArrayList<>();
-        emitters.forEach(emitter -> {
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("notification")
-                        .data("User ID: " + userId + " - " + message));
-            } catch (IOException e) {
-                deadEmitters.add(emitter);
-            }
-        });
-        emitters.removeAll(deadEmitters);
-        log.info("알림이 전송되었습니다. 사용자 ID: {}, 메시지: {}", userId, message);
     }
 }
