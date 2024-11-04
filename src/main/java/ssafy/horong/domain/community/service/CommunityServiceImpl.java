@@ -509,6 +509,8 @@ public class CommunityServiceImpl implements CommunityService {
         return new PageImpl<>(postResponses, pageable, postResponses.size());
     }
 
+
+
     public void validatePostCreateRequest(List<CreateContentByLanguageRequest> contents) {
         for (CreateContentByLanguageRequest request : contents) {
             // 모든 HTML 태그와 속성을 제거하여 순수 텍스트만 남김

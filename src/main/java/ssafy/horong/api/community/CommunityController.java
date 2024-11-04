@@ -14,6 +14,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ssafy.horong.api.CommonResponse;
 import ssafy.horong.api.community.request.*;
+import ssafy.horong.api.community.response.GetAllMessageListResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
 import ssafy.horong.domain.community.service.CommunityService;
@@ -132,6 +133,15 @@ public class CommunityController {
         log.info("[CommunityController] 메시지 리스트 조회 >>>> senderId: {}", senderId);
         GetMessageListRequest request = new GetMessageListRequest(senderId);
         List<GetMessageListResponse> response = communityService.getMessageList(request.toCommand());
+        return CommonResponse.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "모든 메시지 리스트 조회", description = "모든 메시지 리스트를 조회하는 API입니다.")
+    @GetMapping("/messages")
+    public CommonResponse<List<GetAllMessageListResponse>> getAllMessageList() {
+        log.info("[CommunityController] 모든 메시지 리스트 조회");
+        List<GetAllMessageListResponse> response = communityService.getAllMessageList();
         return CommonResponse.ok(response);
     }
 }
