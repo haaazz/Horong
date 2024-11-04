@@ -108,4 +108,11 @@ public class UserExceptionHandler {
         log.error("NotAllowedUseridException Error", e);
         return CommonResponse.badRequest(e.getErrorCode());
     }
+
+    @ExceptionHandler(ForbiddenWordContainedException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public CommonResponse handleForbiddenWordContainedException(ForbiddenWordContainedException e) {
+        log.error("ForbiddenWordContainedException Error", e);
+        return CommonResponse.conflict(e.getErrorCode());
+    }
 }
