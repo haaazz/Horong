@@ -9,13 +9,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.jsoup.Jsoup;
 import ssafy.horong.api.community.request.CreateContentByLanguageRequest;
 import ssafy.horong.api.community.response.GetAllMessageListResponse;
 import ssafy.horong.api.community.response.GetCommentResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
-import org.jsoup.Jsoup;
 import ssafy.horong.common.exception.Board.*;
+import ssafy.horong.common.util.NotificationUtil; // NotificationUtil 추가
 import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.elastic.PostDocument;
@@ -30,11 +31,11 @@ import ssafy.horong.domain.member.common.MemberRole;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 import ssafy.horong.domain.community.elastic.PostElasticsearchRepository;
-import ssafy.horong.domain.community.entity.Notification;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -48,7 +49,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final MessageRepository messageRepository;
     private final PostElasticsearchRepository postElasticsearchRepository;
     private final NotificationRepository notificationRepository;
-    private final NotificationService notificationService;
+    private final NotificationUtil notificationUtil; // NotificationUtil 추가
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -256,10 +257,25 @@ public class CommunityServiceImpl implements CommunityService {
             notificationRepository.save(notification);
         }
 
-        List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(post.getAuthor(), Notification.NotificationType.COMMENT);
-        unreadCommentNotifications.forEach(notification ->
-                notificationService.sendNotificationToUser("댓글 알림: " + notification.getMessage(), post.getAuthor().getId())
-        );
+        // 읽지 않은 댓글과 메시지를 각각 리스트로 가져옴
+        List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(postAuthor, Notification.NotificationType.COMMENT);
+        List<Notification> unreadMessageNotifications = notificationRepository.findByUserAndIsReadFalseAndType(postAuthor, Notification.NotificationType.MESSAGE);
+
+        // 각각의 알림 메시지를 문자열 리스트로 변환
+        List<String> unreadComments = unreadCommentNotifications.stream()
+                .map(Notification::getMessage)
+                .toList();
+
+        List<String> unreadMessages = unreadMessageNotifications.stream()
+                .map(Notification::getMessage)
+                .toList();
+
+        // 두 리스트를 병합하여 하나의 리스트로 만듦
+        List<String> combinedNotifications = Stream.concat(unreadComments.stream(), unreadMessages.stream())
+                .collect(Collectors.toList());
+
+        // 병합된 리스트를 전송
+        notificationUtil.sendNotificationToUser(combinedNotifications, postAuthor.getId()); // 수정된 부분
     }
 
     @Override
@@ -373,19 +389,25 @@ public class CommunityServiceImpl implements CommunityService {
         contentByCountries.forEach(contentByLanguage -> contentByLanguage.setMessage(message));
         messageRepository.save(message);
 
-        // 메시지 전송 시 수신자에게 알림 전송
-        Notification notification = Notification.builder()
-                .user(receiver)
-                .message(getCurrentUser().getNickname() + "으로부터 새 메시지가 도착했습니다.")
-                .isRead(false)
-                .createdAt(LocalDateTime.now())
-                .build();
-        notificationRepository.save(notification);
+        // 읽지 않은 댓글과 메시지를 각각 리스트로 가져옴
+        List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(receiver, Notification.NotificationType.COMMENT);
+        List<Notification> unreadMessageNotifications = notificationRepository.findByUserAndIsReadFalseAndType(receiver, Notification.NotificationType.MESSAGE);
 
-        List<Notification> unreadNotifications = notificationRepository.findByUserAndIsReadFalse(receiver);
-        unreadNotifications.forEach(unreadNotification ->
-                notificationService.sendNotificationToUser("알림: " + unreadNotification.getMessage(), receiver.getId())
-        );
+        // 각각의 알림 메시지를 문자열 리스트로 변환
+        List<String> unreadComments = unreadCommentNotifications.stream()
+                .map(Notification::getMessage)
+                .toList();
+
+        List<String> unreadMessages = unreadMessageNotifications.stream()
+                .map(Notification::getMessage)
+                .toList();
+
+        // 두 리스트를 병합하여 하나의 리스트로 만듦
+        List<String> combinedNotifications = Stream.concat(unreadComments.stream(), unreadMessages.stream())
+                .collect(Collectors.toList());
+
+        // 병합된 리스트를 전송
+        notificationUtil.sendNotificationToUser(combinedNotifications, receiver.getId()); // 수정된 부분
     }
 
     @Override
@@ -423,7 +445,6 @@ public class CommunityServiceImpl implements CommunityService {
                 }).reversed())
                 .toList();
     }
-
 
     @Override
     public List<GetMessageListResponse> getMessageList(GetMessageListCommand command) {
