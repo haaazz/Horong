@@ -9,8 +9,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import ssafy.horong.api.community.NotificationController;
 import ssafy.horong.api.community.request.CreateContentByLanguageRequest;
 import ssafy.horong.api.community.response.GetAllMessageListResponse;
 import ssafy.horong.api.community.response.GetCommentResponse;
@@ -36,9 +34,7 @@ import ssafy.horong.domain.community.entity.Notification;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
-import java.io.IOException;
 
 @Slf4j
 @Service
@@ -52,7 +48,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final MessageRepository messageRepository;
     private final PostElasticsearchRepository postElasticsearchRepository;
     private final NotificationRepository notificationRepository;
-    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final NotificationService notificationService;
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -262,7 +258,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(post.getAuthor(), Notification.NotificationType.COMMENT);
         unreadCommentNotifications.forEach(notification ->
-                sendNotificationToUser("댓글 알림: " + notification.getMessage(), post.getAuthor().getId())
+                notificationService.sendNotificationToUser("댓글 알림: " + notification.getMessage(), post.getAuthor().getId())
         );
     }
 
@@ -388,7 +384,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         List<Notification> unreadNotifications = notificationRepository.findByUserAndIsReadFalse(receiver);
         unreadNotifications.forEach(unreadNotification ->
-                sendNotificationToUser("알림: " + unreadNotification.getMessage(), receiver.getId())
+                notificationService.sendNotificationToUser("알림: " + unreadNotification.getMessage(), receiver.getId())
         );
     }
 
@@ -513,20 +509,5 @@ public class CommunityServiceImpl implements CommunityService {
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&#x27;");
-    }
-
-    public void sendUnreadNotifications() {
-        List<User> users = userRepository.findAll();
-        users.forEach(user -> {
-            List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(user, Notification.NotificationType.COMMENT);
-            unreadCommentNotifications.forEach(notification ->
-                    sendNotificationToUser("댓글 알림: " + notification.getMessage(), user.getId())
-            );
-
-            List<Notification> unreadMessageNotifications = notificationRepository.findByUserAndIsReadFalseAndType(user, Notification.NotificationType.MESSAGE);
-            unreadMessageNotifications.forEach(notification ->
-                    sendNotificationToUser("메시지 알림: " + notification.getMessage(), user.getId())
-            );
-        });
     }
 }

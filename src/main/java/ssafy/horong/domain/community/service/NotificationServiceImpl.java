@@ -26,6 +26,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final NotificationService notificationService;
 
     @Transactional
     public void sendNotificationToUser(String message, Long userId) {
@@ -51,14 +52,15 @@ public class NotificationServiceImpl implements NotificationService {
         notificationRepository.save(newNotifications);
         User user = getCurrentUser();
 
+        // Use the injected dependency to call the method
         List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(user, Notification.NotificationType.COMMENT);
         unreadCommentNotifications.forEach(notification ->
-                sendNotificationToUser("댓글 알림: " + notification.getMessage(), user.getId())
+                notificationService.sendNotificationToUser("댓글 알림: " + notification.getMessage(), user.getId())
         );
 
         List<Notification> unreadMessageNotifications = notificationRepository.findByUserAndIsReadFalseAndType(user, Notification.NotificationType.MESSAGE);
         unreadMessageNotifications.forEach(notification ->
-                sendNotificationToUser("메시지 알림: " + notification.getMessage(), user.getId())
+                notificationService.sendNotificationToUser("메시지 알림: " + notification.getMessage(), user.getId())
         );
     }
 
