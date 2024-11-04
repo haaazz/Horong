@@ -10,6 +10,7 @@ import org.springframework.data.elasticsearch.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.jsoup.Jsoup;
+import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.api.community.request.CreateContentByLanguageRequest;
 import ssafy.horong.api.community.response.GetAllMessageListResponse;
 import ssafy.horong.api.community.response.GetCommentResponse;
@@ -17,6 +18,7 @@ import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
 import ssafy.horong.common.exception.Board.*;
 import ssafy.horong.common.util.NotificationUtil; // NotificationUtil 추가
+import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.elastic.PostDocument;
@@ -50,6 +52,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final PostElasticsearchRepository postElasticsearchRepository;
     private final NotificationRepository notificationRepository;
     private final NotificationUtil notificationUtil; // NotificationUtil 추가
+    private final S3Util s3Util;
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -509,7 +512,9 @@ public class CommunityServiceImpl implements CommunityService {
         return new PageImpl<>(postResponses, pageable, postResponses.size());
     }
 
-
+    public String saveImageToS3(MultipartFile file) {
+        return s3Util.uploadImageToS3(file, UUID.randomUUID().toString(), "community");
+    }
 
     public void validatePostCreateRequest(List<CreateContentByLanguageRequest> contents) {
         for (CreateContentByLanguageRequest request : contents) {
