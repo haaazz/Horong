@@ -19,6 +19,7 @@ import ssafy.horong.common.exception.s3.S3UploadFailedException;
 import ssafy.horong.common.properties.S3Properties;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.time.Duration;
@@ -57,15 +58,17 @@ public class S3Util {
         return location + fileName + extension;
     }
 
-    public String uploadImageToS3(MultipartFile imageFile, String fileNmae, String location) {
-        try {
-            String fileName = getS3FileName(imageFile, fileNmae, location);
-            amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), fileName, imageFile.getInputStream(), null));
-            return fileName; // 객체 키만 반환
+    public String uploadImageToS3(MultipartFile imageFile, String fileName, String location) {
+        String s3FileName = getS3FileName(imageFile, fileName, location); // S3에 업로드할 파일명 생성
+        try (InputStream inputStream = imageFile.getInputStream()) { // try-with-resources 사용
+            amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), s3FileName, inputStream, null));
+            return s3FileName; // 객체 키만 반환
         } catch (IOException e) {
+            log.error("S3 업로드 실패: {}", e.getMessage());
             throw new S3UploadFailedException();
         }
     }
+
 
     public String uploadUserImageToS3(MultipartFile imageFile, Long userId, String location, String existingImageUrl) {
         if (imageFile == null || imageFile.isEmpty()) {
