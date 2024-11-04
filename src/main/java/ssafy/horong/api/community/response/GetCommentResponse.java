@@ -13,7 +13,7 @@ public record GetCommentResponse(
         @Schema(description = "댓글 작성자 닉네임", example = "작성자")
         String nickname,
 
-        @Schema(description = "댓글의 언어별 콘텐츠", example = "[{...}, {...}]")
+        @Schema(description = "댓글의 언어별 콘텐츠", example = "댓글입니다.")
         String contents
 ) {
 }
