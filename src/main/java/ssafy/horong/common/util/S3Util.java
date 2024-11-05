@@ -67,7 +67,6 @@ public class S3Util {
         }
     }
 
-
     public String uploadUserImageToS3(MultipartFile imageFile, Long userId, String location, String existingImageUrl) {
         if (imageFile == null || imageFile.isEmpty()) {
             return existingImageUrl != null && !existingImageUrl.isEmpty() ? existingImageUrl : S3_IMAGE.DEFAULT_URL;

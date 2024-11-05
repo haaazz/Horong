@@ -569,7 +569,7 @@ public class CommunityServiceImpl implements CommunityService {
 
 
     public String saveImageToS3(MultipartFile file) {
-        return s3Util.uploadToS3(file, UUID.randomUUID().toString(), "community");
+        return s3Util.uploadToS3(file, UUID.randomUUID().toString(), "community/");
     }
 
     public void validatePostCreateRequest(List<CreateContentByLanguageRequest> contents) {

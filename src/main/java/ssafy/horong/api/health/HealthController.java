@@ -81,7 +81,7 @@ public class HealthController {
     public CommonResponse<URI> checkImageTransfer(@ModelAttribute @Validated TestRequest request) {
 
         log.info("health{}", request.image());
-        String imageUrl= s3Util.uploadToS3(request.image(), "test", "test");
+        String imageUrl= s3Util.uploadToS3(request.image(), "test", "test/");
         return CommonResponse.ok(s3Util.getS3UrlFromS3(imageUrl));
     }
 
@@ -92,7 +92,7 @@ public class HealthController {
         log.info("Received file: {}", audioFile.getOriginalFilename());
 
         // mp3 파일을 S3에 업로드
-        String audioUrl = s3Util.uploadToS3(audioFile, "audio", "testAudio");
+        String audioUrl = s3Util.uploadToS3(audioFile, "audio", "testAudio/");
 
         // 업로드된 파일의 URL 반환
         return CommonResponse.ok(s3Util.getS3UrlFromS3(audioUrl));
