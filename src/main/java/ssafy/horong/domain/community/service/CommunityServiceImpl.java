@@ -646,22 +646,34 @@ public class CommunityServiceImpl implements CommunityService {
         // 현재 사용자의 언어 가져오기
         Language language = getCurrentUser().getLanguage();
 
-        return postRepository.findTopByTypeOrderByCreatedDateDesc(boardType, PageRequest.of(0, limit))
-                .stream()
-                .filter(post -> post.getDeletedDate() == null)
+        List<Post> posts = postRepository.findByTypeOrderByCreatedDateDesc(boardType, PageRequest.of(0, limit));
+        log.info("{} 게시판에서 가져온 초기 게시글 개수: {}", boardType, posts.size());
+
+        return posts.stream()
+                .filter(post -> {
+                    boolean notDeleted = post.getDeletedDate() == null;
+                    log.info("게시글 ID: {}, 삭제 여부: {}", post.getId(), notDeleted);
+                    return notDeleted;
+                })
                 .map(post -> {
                     // 언어별 콘텐츠 필터링
                     String content = post.getContentByCountries().stream()
                             .filter(c -> c.getLanguage() == language)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
-                            .orElseThrow(PostNotFoundException::new);
+                            .orElseThrow(() -> {
+                                log.warn("게시글 ID: {}의 콘텐츠가 지정된 언어로 존재하지 않음", post.getId());
+                                return new PostNotFoundException();
+                            });
 
                     String title = post.getContentByCountries().stream()
                             .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.TITLE)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
-                            .orElseThrow(PostNotFoundException::new);
+                            .orElseThrow(() -> {
+                                log.warn("게시글 ID: {}의 제목이 지정된 언어로 존재하지 않음", post.getId());
+                                return new PostNotFoundException();
+                            });
 
                     List<GetCommentResponse> commentResponses = convertToCommentResponse(
                             post.getComments().stream().toList()
