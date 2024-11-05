@@ -65,6 +65,7 @@ public class CommunityServiceImpl implements CommunityService {
                 .type(command.boardType())
                 .author(getCurrentUser())
                 .build();
+        log.info("이미지 경로 {}", command.contentImageRequest());
 
         List<ContentImage> contentImages = command.contentImageRequest().stream()
                 .map(ContentImageRequest::imageUrl)
@@ -73,6 +74,7 @@ public class CommunityServiceImpl implements CommunityService {
                     return ContentImage.builder().imageUrl(trimmedUrl).build();
                 })
                 .toList();
+        log.info("이미지 경로: {}", contentImages);
 
         // ContentByLanguage 리스트 변환 (내용과 제목 모두 처리)
         List<ContentByLanguage> contentEntities = command.content().stream()
@@ -643,7 +645,7 @@ public class CommunityServiceImpl implements CommunityService {
         // 현재 사용자의 언어 가져오기
         Language language = getCurrentUser().getLanguage();
 
-        return postRepository.findTopByBoardTypeOrderByCreatedDateDesc(boardType, PageRequest.of(0, limit))
+        return postRepository.findTopByTypeOrderByCreatedDateDesc(boardType, PageRequest.of(0, limit))
                 .stream()
                 .filter(post -> post.getDeletedDate() == null)
                 .map(post -> {
