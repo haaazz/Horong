@@ -9,12 +9,12 @@ public record PasswordUpdateRequest(
         String currentPassword,
 
         @Schema(description = "변경할 비밀번호", example = "password1234")
-        String newPassword,
-
-        @Schema(description = "플레이어의 이메일", example = "user1@gmail.com")
-        String email
+        String newPassword
+//
+//        @Schema(description = "플레이어의 이메일", example = "user1@gmail.com")
+//        String email
 ) {
     public PasswordUpdateCommand toCommand() {
-        return new PasswordUpdateCommand(currentPassword, newPassword, email);
+        return new PasswordUpdateCommand(currentPassword, newPassword);
     }
 }

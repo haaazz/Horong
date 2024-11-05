@@ -200,8 +200,9 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void updateMemberPassword(PasswordUpdateCommand command) {
         log.info("[UserService] 비밀번호 변경");
-        User user = getUserForPasswordUpdate(command);
+//        User user = getUserForPasswordUpdate(command);
 
+        User user = getCurrentLoggedInMember();
         verifyCurrentPassword(command.currentPassword(), user);
         verifyNewPassword(command.newPassword(), user);
 
@@ -271,13 +272,19 @@ public class UserServiceImpl implements UserService {
         return user;
     }
 
-    private User getUserForPasswordUpdate(PasswordUpdateCommand command) {
-        if (command.email() != null) {
-            return userRepository.findNotDeletedUserByUserId(command.email())
-                    .orElseThrow(MemberNotFoundException::new);
-        }
-        return getCurrentLoggedInMember();
+    public void updateLanguage(Language language) {
+        User user = getCurrentLoggedInMember();
+        user.setLanguage(language);
+        userRepository.save(user);
     }
+
+//    private User getUserForPasswordUpdate(PasswordUpdateCommand command) {
+//        if (command.email() != null) {
+//            return userRepository.findNotDeletedUserByUserId(command.email())
+//                    .orElseThrow(MemberNotFoundException::new);
+//        }
+//        return getCurrentLoggedInMember();
+//    }
 
     private void verifyCurrentPassword(String currentPassword, User user) {
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
