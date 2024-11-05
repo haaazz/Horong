@@ -67,7 +67,10 @@ public class CommunityServiceImpl implements CommunityService {
 
         List<ContentImage> contentImages = command.contentImageRequest().stream()
                 .map(ContentImageRequest::imageUrl)
-                .map(imageUrl -> ContentImage.builder().imageUrl(imageUrl).build())
+                .map(imageUrl -> {
+                    String trimmedUrl = imageUrl.substring(imageUrl.indexOf("community/"));
+                    return ContentImage.builder().imageUrl(trimmedUrl).build();
+                })
                 .toList();
 
         // ContentByLanguage 리스트 변환 (내용과 제목 모두 처리)
@@ -77,7 +80,7 @@ public class CommunityServiceImpl implements CommunityService {
                     ContentByLanguage titleEntity = ContentByLanguage.builder()
                             .content(c.title()) // 제목
                             .isOriginal(c.isOriginal())
-                            .language(c.language())
+                            .language(Optional.ofNullable(c.language()).orElse(null))
                             .contentType(ContentByLanguage.ContentType.TITLE)
                             .build();
                     titleEntity.setPost(post); // Post 설정
@@ -276,7 +279,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         List<ContentByLanguage> contentByCountries = command.contentByCountries().stream()
                 .map(contentRequest -> ContentByLanguage.builder()
-                        .language(contentRequest.language())
+                        .language(Optional.ofNullable(contentRequest.language()).orElse(null)) // language가 null이면 그대로 null을 사용
                         .content(contentRequest.content())
                         .isOriginal(contentRequest.isOriginal())
                         .comment(comment)
@@ -407,11 +410,27 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     @Transactional
     public void sendMessage(SendMessageCommand command) {
+        List<ContentImage> contentImages = command.contentImageRequest().stream()
+                .map(ContentImageRequest::imageUrl)
+                .map(imageUrl -> {
+                    String trimmedUrl = imageUrl.substring(imageUrl.indexOf("community/"));
+                    return ContentImage.builder().imageUrl(trimmedUrl).build();
+                })
+                .toList();
+
         List<ContentByLanguage> contentByCountries = command.contentsByLanguages().stream()
-                .map(contentByLanguageCommand -> ContentByLanguage.builder()
-                        .language(contentByLanguageCommand.language())
-                        .content(contentByLanguageCommand.content())
-                        .build())
+                .map(contentByLanguageCommand -> {
+                    ContentByLanguage contentEntity = ContentByLanguage.builder()
+                            .language(Optional.ofNullable(contentByLanguageCommand.language()).orElse(null))
+                            .content(contentByLanguageCommand.content())
+                            .contentImages(contentImages) // 이미지 포함
+                            .build();
+
+                    // ContentImage와 ContentByLanguage 관계 설정
+                    contentImages.forEach(contentImage -> contentImage.setContent(contentEntity));
+
+                    return contentEntity;
+                })
                 .toList();
 
         User receiver = userRepository.findByNickname(command.receiverNickname())
@@ -447,6 +466,7 @@ public class CommunityServiceImpl implements CommunityService {
         // 병합된 리스트를 전송
         notificationUtil.sendNotificationToUser(combinedNotifications, receiver.getId()); // 수정된 부분
     }
+
 
     @Override
     public List<GetAllMessageListResponse> getAllMessageList() {
