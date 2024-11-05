@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import ssafy.horong.api.education.response.GetEducationRecordResponse;
@@ -23,8 +24,7 @@ import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -50,56 +50,58 @@ public class EducationServiceImpl implements EducationService {
     }
 
     public List<GetEducationRecordResponse> getAllEducationRecord() {
-        // 교육 기록 리스트를 가져옵니다.
-        List<Education> educationList = educationRepository.findAll();
-
-        // 응답 리스트를 빈 리스트로 초기화합니다.
-        List<GetEducationRecordResponse> responseList = new ArrayList<>();
-
         // 현재 로그인한 사용자 ID를 가져옵니다.
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
 
-        // 각 교육 자료에 대해 교육 기록을 조회하고 응답 리스트에 추가합니다.
-        for (Education education : educationList) {
-            // 교육 기록 리스트를 가져옵니다.
-            List<EducationRecord> educationRecords = educationRecordRepository.findByEducationIdAndUserId(education.getId(), userId);
+        // 해당 사용자와 연관된 모든 교육 기록을 가져옵니다.
+        List<EducationRecord> educationRecords = educationRecordRepository.findByUserId(userId);
 
-            // 교육 기록이 존재하는 경우, 응답 리스트에 추가합니다.
-            for (EducationRecord educationRecord : educationRecords) {
-                GetEducationRecordResponse response = new GetEducationRecordResponse(education, educationRecords);
-                responseList.add(response);
-            }
+        // Education을 기준으로 EducationRecord를 그룹화합니다.
+        Map<Education, List<EducationRecord>> groupedRecords = new HashMap<>();
+        for (EducationRecord record : educationRecords) {
+            groupedRecords
+                    .computeIfAbsent(record.getEducation(), k -> new ArrayList<>())
+                    .add(record);
         }
+
+        // 응답 리스트를 생성합니다.
+        List<GetEducationRecordResponse> responseList = new ArrayList<>();
+        for (Map.Entry<Education, List<EducationRecord>> entry : groupedRecords.entrySet()) {
+            GetEducationRecordResponse response = new GetEducationRecordResponse(entry.getKey(), entry.getValue());
+            responseList.add(response);
+        }
+
         return responseList;
     }
 
     @Transactional
     public float saveEducationRecord(SaveEduciatonRecordCommand command) {
-        // Education 객체를 가져옵니다.
         Education education = educationRepository.findByWord(command.word());
+        Long educationId = education.getId();
+        Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
 
-        // Education ID와 현재 사용자 ID를 사용하여 EducationRecord를 찾습니다.
-        Long educationId = education.getId(); // Education의 ID를 가져옵니다.
-        Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null); // 현재 로그인한 사용자의 ID를 가져옵니다.
-        List<EducationRecord> records = educationRecordRepository.findByEducationIdAndUserId(educationId, userId);
-
-        // records가 null이면 0으로 설정합니다.
-        int recordIndex = (records != null && !records.isEmpty()) ? records.size() - 1 : 0;
-
-        // S3에 업로드합니다.
+        // 마지막 recordIndex 값 조회 및 +1 증가하여 고유한 값 설정
+//        int recordIndex = educationRecordRepository.findMaxRecordIndexByEducationIdAndUserId(educationId, userId)
+//                .map(index -> index + 1)
+//                .orElse(0);
+        UUID recordIndex = UUID.randomUUID();
+        // S3에 업로드
         String location = s3Util.uploadToS3(command.audio(), command.word() + "/" + userId + "/" + recordIndex, "education/");
 
-        // EducationRecord를 저장합니다.
+        // EducationRecord 저장
         EducationRecord educationRecord = EducationRecord.builder()
                 .education(education)
                 .audio(location)
+                .cer(0) // 임시 값
                 .build();
-        educationRecordRepository.save(educationRecord); // EducationRecord 저장
 
+        // 외부 서버 요청
         String requestUrl = webClientProperties.url();
-
-        float score = webClient.get()
+        float score = webClient.post()
                 .uri(requestUrl)
+                .body(BodyInserters.fromValue(Map.of(
+                        "url", s3Util.getS3UrlFromS3(location)
+                )))
                 .retrieve()
                 .onStatus(
                         status -> status.is4xxClientError() || status.is5xxServerError(),
@@ -111,9 +113,11 @@ public class EducationServiceImpl implements EducationService {
                 .blockOptional()
                 .orElseThrow(DataNotFoundException::new);
 
+        // CER 값 설정 후 저장
         educationRecord.setCer(score);
+        educationRecordRepository.save(educationRecord);
 
-        // 서버 요청 후 float 값을 반환합니다.
         return score;
     }
+
 }
