@@ -34,7 +34,6 @@ import ssafy.horong.common.exception.User.*;
 import java.time.LocalDateTime;
 import java.util.Set;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -49,11 +48,9 @@ public class UserServiceImpl implements UserService {
     private final RedisTemplate<String, String> redisTemplateslang;
     private static final String FORBIDDEN_WORDS_KEY = "forbiddenWords";
 
-
     @Override
     @Transactional
     public UserSignupResponse signupMember(MemberSignupCommand signupCommand) {
-
         validateSignupCommand(signupCommand);
 
         log.info("[UserService] 유저 회원가입");
@@ -81,8 +78,6 @@ public class UserServiceImpl implements UserService {
         log.info("[Timing] 유저 저장 소요 시간: {} ms", afterUserSave - afterUserCreation);
 
         // 4. 프로필 이미지 처리
-//        MultipartFile imageFile = signupCommand.imageUrl();
-//        String imageUrl = handleProfileImage(imageFile, userToSave.getId(), userToSave.getProfileImg());
         String imageUrl = S3_IMAGE.DEFAULT_URL;
         userToSave.setProfileImg(imageUrl);
         userRepository.save(userToSave); // 프로필 이미지 업데이트 후 다시 저장
@@ -147,13 +142,6 @@ public class UserServiceImpl implements UserService {
         validateUpdateProfileCommand(command);
         User currentUser = getCurrentLoggedInMember();
 
-//        MultipartFile profileImageFile = command.profileImagePath();
-//        String imageUrl = S3_IMAGE.DEFAULT_URL;
-//        if (!command.deleteImage()) {
-//            imageUrl = handleProfileImage(profileImageFile, currentUser.getId(), currentUser.getProfileImg());
-//        }// MultipartFile로 변경`
-//        String preSignedUrl = generatePreSignedUrl(imageUrl);
-
         String updatedNickname = getUpdatedField(command.nickname(), currentUser.getNickname());
 
         currentUser.updateProfile(updatedNickname);
@@ -201,7 +189,6 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void updateMemberPassword(PasswordUpdateCommand command) {
         log.info("[UserService] 비밀번호 변경");
-//        User user = getUserForPasswordUpdate(command);
 
         User user = getCurrentLoggedInMember();
         verifyCurrentPassword(command.currentPassword(), user);
@@ -216,7 +203,6 @@ public class UserServiceImpl implements UserService {
                 .build();
 
         passwordHistoryRepository.save(passwordHistory);
-
         userRepository.save(user);
     }
 
@@ -241,10 +227,6 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
-    private String handleProfileImage(MultipartFile imageFile, Long userId, String existingImageUrl) {
-        return s3Util.uploadUserImageToS3(imageFile, userId, "profileImg/", existingImageUrl);
-    }
-
     private String generatePreSignedUrl(String imageUrl) {
         if (imageUrl == null) {
             return "";
@@ -267,7 +249,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(MemberNotFoundException::new);
 
-        if (user.isDeleted()){
+        if (user.isDeleted()) {
             throw new NotAuthenticatedException();
         }
         return user;
@@ -279,14 +261,6 @@ public class UserServiceImpl implements UserService {
         user.setLanguage(language);
         userRepository.save(user);
     }
-
-//    private User getUserForPasswordUpdate(PasswordUpdateCommand command) {
-//        if (command.email() != null) {
-//            return userRepository.findNotDeletedUserByUserId(command.email())
-//                    .orElseThrow(MemberNotFoundException::new);
-//        }
-//        return getCurrentLoggedInMember();
-//    }
 
     private void verifyCurrentPassword(String currentPassword, User user) {
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
@@ -304,7 +278,6 @@ public class UserServiceImpl implements UserService {
                 throw new PasswordUsedException();
             }
         }
-
     }
 
     public UserIdResponse getMemberId() {
@@ -368,11 +341,6 @@ public class UserServiceImpl implements UserService {
                 throw new ForbiddenWordContainedException();
             }
         }
-//        if (command.language() != null) {
-//            if (!isValidLanguage(command.language())) {
-//                throw new LanguageNotValidExeption();
-//            }
-//        }
     }
 
     private boolean isValidLanguage(Language language) {
