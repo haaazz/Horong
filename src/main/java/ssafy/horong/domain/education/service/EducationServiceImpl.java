@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import ssafy.horong.api.education.response.EducationRecordResponse;
 import ssafy.horong.api.education.response.GetEducationRecordResponse;
 import ssafy.horong.api.education.response.TodayWordsResponse;
 import ssafy.horong.common.exception.data.DataNotFoundException;
@@ -57,16 +58,23 @@ public class EducationServiceImpl implements EducationService {
         List<EducationRecord> educationRecords = educationRecordRepository.findByUserId(userId);
 
         // Education을 기준으로 EducationRecord를 그룹화합니다.
-        Map<Education, List<EducationRecord>> groupedRecords = new HashMap<>();
+        Map<Education, List<EducationRecordResponse>> groupedRecords = new HashMap<>();
         for (EducationRecord record : educationRecords) {
+            EducationRecordResponse recordResponse = new EducationRecordResponse(
+                    record.getId(),
+                    record.getEducation(),
+                    record.getCer(),
+                    record.getDate(),
+                    s3Util.getS3UrlFromS3(record.getAudio())
+            );
             groupedRecords
                     .computeIfAbsent(record.getEducation(), k -> new ArrayList<>())
-                    .add(record);
+                    .add(recordResponse);
         }
 
         // 응답 리스트를 생성합니다.
         List<GetEducationRecordResponse> responseList = new ArrayList<>();
-        for (Map.Entry<Education, List<EducationRecord>> entry : groupedRecords.entrySet()) {
+        for (Map.Entry<Education, List<EducationRecordResponse>> entry : groupedRecords.entrySet()) {
             GetEducationRecordResponse response = new GetEducationRecordResponse(entry.getKey(), entry.getValue());
             responseList.add(response);
         }
@@ -77,7 +85,7 @@ public class EducationServiceImpl implements EducationService {
     @Transactional
     public float saveEducationRecord(SaveEduciatonRecordCommand command) {
         Education education = educationRepository.findByWord(command.word());
-        Long educationId = education.getId();
+//        Long educationId = education.getId();
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
 
         // 마지막 recordIndex 값 조회 및 +1 증가하여 고유한 값 설정

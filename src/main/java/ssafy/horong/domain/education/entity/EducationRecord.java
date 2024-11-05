@@ -2,6 +2,8 @@ package ssafy.horong.domain.education.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDate;
 import java.util.Date;
 
 @Entity
@@ -27,13 +29,14 @@ public class EducationRecord {
     private float cer; // 인증 점수
 
     @Column(nullable = false)
-    private Date date; // 학습 날짜
+    private LocalDate date; // 학습 날짜
 
     @Column(length = 255, nullable = false)
     private String audio; // S3 링크
 
     @PrePersist
     public void prePersist() {
-        this.date = new Date();
+        this.date = LocalDate.now();
     }
+
 }
