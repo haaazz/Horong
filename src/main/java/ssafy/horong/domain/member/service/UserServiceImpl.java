@@ -273,6 +273,7 @@ public class UserServiceImpl implements UserService {
         return user;
     }
 
+    @Transactional
     public void updateLanguage(Language language) {
         User user = getCurrentLoggedInMember();
         user.setLanguage(language);

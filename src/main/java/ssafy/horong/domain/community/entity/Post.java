@@ -34,11 +34,11 @@ public class Post {
     @JoinColumn(name = "author_id")
     private User author;
 
-    private LocalDateTime createdDate;
+    private LocalDateTime createdAt;
 
-    private LocalDateTime updatedDate;
+    private LocalDateTime updatedAt;
 
-    private LocalDateTime deletedDate;
+    private LocalDateTime deletedAt;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
     private List<ContentByLanguage> contentByCountries;
@@ -49,6 +49,6 @@ public class Post {
 
     @PrePersist
     protected void onCreate() {
-        createdDate = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
     }
 }

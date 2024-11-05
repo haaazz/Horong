@@ -54,6 +54,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final NotificationRepository notificationRepository;
     private final NotificationUtil notificationUtil; // NotificationUtil 추가
     private final S3Util s3Util;
+    private final BoardRepository boardRepository;
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -195,7 +196,7 @@ public class CommunityServiceImpl implements CommunityService {
         Post post = getPost(id);
         validateUserOrAdmin(post.getAuthor());
 
-        post.setDeletedDate(LocalDateTime.now());
+        post.setDeletedAt(LocalDateTime.now());
         log.info("게시글 삭제: {}", id);
         postElasticsearchRepository.deleteById(String.valueOf(post.getId()));
     }
@@ -205,13 +206,13 @@ public class CommunityServiceImpl implements CommunityService {
         log.info("게시글 조회: {}", id);
         Post post = getPost(id);
 
-        if (post.getDeletedDate() != null) {
+        if (post.getDeletedAt() != null) {
             throw new PostDeletedException();
         }
 
         Language language = getCurrentUser().getLanguage();
         String content = post.getContentByCountries().stream()
-                .filter(c -> c.getLanguage() == language)
+                .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.CONTENT)
                 .findFirst()
                 .map(ContentByLanguage::getContent)
                 .orElseThrow(PostNotFoundException::new);
@@ -231,6 +232,7 @@ public class CommunityServiceImpl implements CommunityService {
                 title,
                 post.getAuthor().getNickname(),
                 content,
+                post.getCreatedAt().toString(),
                 commentResponses
         );
     }
@@ -243,10 +245,10 @@ public class CommunityServiceImpl implements CommunityService {
         Language language = getCurrentUser().getLanguage();
 
         List<GetPostResponse> postResponses = postPage.getContent().stream()
-                .filter(post -> post.getDeletedDate() == null)
+                .filter(post -> post.getDeletedAt() == null)
                 .map(post -> {
                     String content = post.getContentByCountries().stream()
-                            .filter(c -> c.getLanguage() == language)
+                            .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.CONTENT)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
                             .orElseThrow(PostNotFoundException::new);
@@ -267,6 +269,7 @@ public class CommunityServiceImpl implements CommunityService {
                             title,
                             post.getAuthor().getNickname(),
                             content,
+                            post.getCreatedAt().toString(),
                             commentResponses
                     );
                 })
@@ -335,7 +338,7 @@ public class CommunityServiceImpl implements CommunityService {
         Comment comment = getComment(commentId);
         validateUserOrAdmin(comment.getAuthor());
 
-        comment.setDeletedDate(LocalDateTime.now());
+        comment.setDeletedAt(LocalDateTime.now());
         log.info("댓글 삭제: {}", commentId);
     }
 
@@ -359,7 +362,7 @@ public class CommunityServiceImpl implements CommunityService {
             });
         }
 
-        comment.setUpdatedDate(LocalDateTime.now());
+        comment.setUpdatedAt(LocalDateTime.now());
         commentRepository.save(comment);
     }
 
@@ -392,10 +395,11 @@ public class CommunityServiceImpl implements CommunityService {
         return comments.stream()
                 .map(comment -> {
                     // 댓글이 삭제된 경우 처리
-                    if (comment.getDeletedDate() != null) {
+                    if (comment.getDeletedAt() != null) {
                         return new GetCommentResponse(
                                 null, // 삭제된 댓글의 ID
                                 "deleted", // 삭제된 닉네임
+                                null,
                                 "삭제된 댓글입니다." // 삭제된 댓글 내용
                         );
                     }
@@ -409,7 +413,8 @@ public class CommunityServiceImpl implements CommunityService {
                     return new GetCommentResponse(
                             comment.getId(),
                             comment.getAuthor().getNickname(),
-                            content
+                            content,
+                            comment.getCreatedAt().toString()
                     );
                 })
                 .toList();
@@ -586,6 +591,7 @@ public class CommunityServiceImpl implements CommunityService {
                             title,
                             postDocument.getAuthor(),
                             content,
+                            boardRepository.findById(postDocument.getPostId()).orElse(null).getCreatedAt().toString(),
                             List.of()
                     );
                 })
@@ -646,22 +652,34 @@ public class CommunityServiceImpl implements CommunityService {
         // 현재 사용자의 언어 가져오기
         Language language = getCurrentUser().getLanguage();
 
-        return postRepository.findTopByTypeOrderByCreatedDateDesc(boardType, PageRequest.of(0, limit))
-                .stream()
-                .filter(post -> post.getDeletedDate() == null)
+        List<Post> posts = postRepository.findByTypeOrderByCreatedAtDesc(boardType, PageRequest.of(0, limit));
+        log.info("{} 게시판에서 가져온 초기 게시글 개수: {}", boardType, posts.size());
+
+        return posts.stream()
+                .filter(post -> {
+                    boolean notDeleted = post.getDeletedAt() == null;
+                    log.info("게시글 ID: {}, 삭제 여부: {}", post.getId(), notDeleted);
+                    return notDeleted;
+                })
                 .map(post -> {
                     // 언어별 콘텐츠 필터링
                     String content = post.getContentByCountries().stream()
-                            .filter(c -> c.getLanguage() == language)
+                            .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.CONTENT)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
-                            .orElseThrow(PostNotFoundException::new);
+                            .orElseThrow(() -> {
+                                log.warn("게시글 ID: {}의 콘텐츠가 지정된 언어로 존재하지 않음", post.getId());
+                                return new PostNotFoundException();
+                            });
 
                     String title = post.getContentByCountries().stream()
                             .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.TITLE)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
-                            .orElseThrow(PostNotFoundException::new);
+                            .orElseThrow(() -> {
+                                log.warn("게시글 ID: {}의 제목이 지정된 언어로 존재하지 않음", post.getId());
+                                return new PostNotFoundException();
+                            });
 
                     List<GetCommentResponse> commentResponses = convertToCommentResponse(
                             post.getComments().stream().toList()
@@ -672,6 +690,7 @@ public class CommunityServiceImpl implements CommunityService {
                             title,
                             post.getAuthor().getNickname(),
                             content,
+                            post.getCreatedAt().toString(),
                             commentResponses
                     );
                 })
