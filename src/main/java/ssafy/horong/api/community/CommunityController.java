@@ -12,13 +12,18 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.api.CommonResponse;
 import ssafy.horong.api.community.request.*;
+import ssafy.horong.api.community.response.GetAllMessageListResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
+import ssafy.horong.api.health.TestRequest;
+import ssafy.horong.domain.community.entity.BoardType;
 import ssafy.horong.domain.community.service.CommunityService;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -69,12 +74,12 @@ public class CommunityController {
         return CommonResponse.ok(response);
     }
 
-    @Operation(summary = "게시글 목록 조회", description = "게시글 목록을 조회하는 API입니다.")
-    @GetMapping("/posts")
-    public CommonResponse<Page<GetPostResponse>> getPostList(
+    @Operation(summary = "게시판별 게시글 목록 조회", description = "게시글 목록을 조회하는 API입니다.")
+    @GetMapping("/posts/{boardType}")
+    public CommonResponse<Page<GetPostResponse>> getPostList(@PathVariable String boardType,
             @Parameter(hidden = true) @PageableDefault(size = 10) Pageable pageable) {
         log.info("[CommunityController] 게시글 목록 조회");
-        Page<GetPostResponse> response = communityService.getPostList(pageable);
+        Page<GetPostResponse> response = communityService.getPostList(pageable, boardType);
         return CommonResponse.ok(response);
     }
 
@@ -132,6 +137,33 @@ public class CommunityController {
         log.info("[CommunityController] 메시지 리스트 조회 >>>> senderId: {}", senderId);
         GetMessageListRequest request = new GetMessageListRequest(senderId);
         List<GetMessageListResponse> response = communityService.getMessageList(request.toCommand());
+        return CommonResponse.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "모든 메시지 리스트 조회", description = "모든 메시지 리스트를 조회하는 API입니다.")
+    @GetMapping("/messages")
+    public CommonResponse<List<GetAllMessageListResponse>> getAllMessageList() {
+        log.info("[CommunityController] 모든 메시지 리스트 조회");
+        List<GetAllMessageListResponse> response = communityService.getAllMessageList();
+        return CommonResponse.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "이미지 S3 업로드", description = "이미지를 S3에 업로드하는 API입니다.")
+    @PostMapping(value = "/image", consumes = { "multipart/form-data" })
+    public CommonResponse<String> saveImageToS3(@ModelAttribute @Validated TestRequest request) {
+        log.info("[CommunityController] 이미지 S3 업로드");
+        String imageUrl = communityService.saveImageToS3(request.image());
+        return CommonResponse.ok(imageUrl);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "게시판 메인 리스트 조회", description = "게시판 메인 리스트를 조회하는 API입니다.")
+    @GetMapping("/main")
+    public CommonResponse<Map<BoardType, List<GetPostResponse>>> getMainPostList() {
+        log.info("[CommunityController] 게시판 메인 리스트 조회");
+        Map<BoardType, List<GetPostResponse>> response = communityService.getMainPostList();
         return CommonResponse.ok(response);
     }
 }

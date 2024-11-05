@@ -27,6 +27,7 @@ public enum UserErrorCode implements BaseErrorCode {
     EMAIL_NOT_FOUND(NOT_FOUND, "USER_404_5", "존재하지 않는 이메일입니다."),
 
     USER_ALREADY_DELETED(CONFLICT, "USER_409_1", "이미 삭제된 회원입니다."),
+    FORBIDDEN_WORD_CONTAINED(CONFLICT, "USER_409_2", "금지어가 포함되어 있습니다."),
 
     ABNORMAL_LOGIN_PROGRESS(INTERNAL_SERVER_ERROR, "USER_500_1", "비정상적으로 로그인이 진행되었습니다.");
 

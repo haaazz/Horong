@@ -5,8 +5,11 @@ import org.springframework.data.elasticsearch.repository.ElasticsearchRepository
 import java.util.List;
 
 public interface PostElasticsearchRepository extends ElasticsearchRepository<PostDocument, String> {
-    List<PostDocument> findByTitleOrAuthorOrContentKoOrContentZhOrContentJaOrContentEn(
-            String title,
+    List<PostDocument> findByTitleKoOrTitleZhOrTitleJaOrTitleEnOrAuthorOrContentKoOrContentZhOrContentJaOrContentEn(
+            String titleKo,
+            String titleZh,
+            String titleJa,
+            String titleEn,
             String author,
             String contentKo,
             String contentZh,

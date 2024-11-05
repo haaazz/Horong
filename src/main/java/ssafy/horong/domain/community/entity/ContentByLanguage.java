@@ -31,14 +31,12 @@ public class ContentByLanguage {
     private Comment comment;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Language language;
 
     @Column(length = 1000, nullable = false)
     private String content;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private ContentType contentType;
 
     private boolean isOriginal;
@@ -47,6 +45,6 @@ public class ContentByLanguage {
     private List<ContentImage> contentImages;
 
     public enum ContentType {
-        COMMENT, POST, MESSAGE
+        TITLE, CONTENT
     }
 }

@@ -1,14 +1,11 @@
 package ssafy.horong.api.health;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -24,16 +21,15 @@ import ssafy.horong.common.exception.data.DataNotFoundException;
 import ssafy.horong.common.exception.errorcode.GlobalErrorCode;
 import ssafy.horong.common.properties.WebClientProperties;
 import ssafy.horong.common.util.S3Util;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import javax.sql.DataSource;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Slf4j
 @RestController
@@ -85,7 +81,7 @@ public class HealthController {
     public CommonResponse<URI> checkImageTransfer(@ModelAttribute @Validated TestRequest request) {
 
         log.info("health{}", request.image());
-        String imageUrl= s3Util.uploadImageToS3(request.image(), "test", "test");
+        String imageUrl= s3Util.uploadToS3(request.image(), "test", "test/");
         return CommonResponse.ok(s3Util.getS3UrlFromS3(imageUrl));
     }
 
@@ -96,7 +92,7 @@ public class HealthController {
         log.info("Received file: {}", audioFile.getOriginalFilename());
 
         // mp3 파일을 S3에 업로드
-        String audioUrl = s3Util.uploadImageToS3(audioFile, "audio", "testAudio");
+        String audioUrl = s3Util.uploadToS3(audioFile, "audio", "testAudio/");
 
         // 업로드된 파일의 URL 반환
         return CommonResponse.ok(s3Util.getS3UrlFromS3(audioUrl));
@@ -147,13 +143,44 @@ public class HealthController {
             while ((line = br.readLine()) != null) {
                 String forbiddenWord = line.trim();
                 if (!forbiddenWord.isEmpty()) {
-                    redisTemplateslang.opsForSet().add(FORBIDDEN_WORDS_KEY, forbiddenWord); // 금칙어 추가
-                    log.info("추가된 금칙어: {}", forbiddenWord);
+                    // 이미 존재하는지 확인 후 추가
+                    if (!redisTemplateslang.opsForSet().isMember(FORBIDDEN_WORDS_KEY, forbiddenWord)) {
+                        redisTemplateslang.opsForSet().add(FORBIDDEN_WORDS_KEY, forbiddenWord); // 금칙어 추가
+                        log.info("추가된 금칙어: {}", forbiddenWord);
+                    } else {
+                        log.info("이미 존재하는 금칙어: {}", forbiddenWord);
+                    }
                 }
             }
             return ResponseEntity.ok(CommonResponse.ok("금칙어가 성공적으로 추가되었습니다.", null));
         } catch (Exception e) {
             log.error("금칙어 추가 중 오류 발생", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CommonResponse.internalServerError(GlobalErrorCode.SERVER_ERROR));
+        }
+    }
+
+    @Operation(summary = "금칙어확인", description = "Redis에 저장된 금칙어 목록을 확인합니다.")
+    @GetMapping("/check/slang")
+    public ResponseEntity<CommonResponse<List<String>>> checkForbiddenWords() {
+        log.info("[HealthController] 금칙어 확인");
+
+        try {
+            // Redis에서 금칙어 가져오기
+            Set<String> forbiddenWords = redisTemplateslang.opsForSet().members(FORBIDDEN_WORDS_KEY);
+
+            if (forbiddenWords != null && !forbiddenWords.isEmpty()) {
+                log.info("Redis에 저장된 금칙어 목록:");
+                for (String word : forbiddenWords) {
+                    log.info("금칙어: {}", word);
+                }
+                return ResponseEntity.ok(CommonResponse.ok("금칙어 목록을 성공적으로 가져왔습니다.", new ArrayList<>(forbiddenWords)));
+            } else {
+                log.info("Redis에 금칙어가 없습니다.");
+                return ResponseEntity.ok(CommonResponse.ok("금칙어 목록이 비어 있습니다.", null));
+            }
+        } catch (Exception e) {
+            log.error("금칙어 확인 중 오류 발생", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(CommonResponse.internalServerError(GlobalErrorCode.SERVER_ERROR));
         }

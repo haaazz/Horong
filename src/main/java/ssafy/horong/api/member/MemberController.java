@@ -15,6 +15,7 @@ import ssafy.horong.api.member.response.UserDetailResponse;
 import ssafy.horong.api.member.response.UserIdResponse;
 import ssafy.horong.api.member.response.UserProfileDetailResponse;
 import ssafy.horong.api.member.response.UserSignupResponse;
+import ssafy.horong.domain.member.common.Language;
 import ssafy.horong.domain.member.service.UserService;
 
 @Slf4j
@@ -83,7 +84,7 @@ public class MemberController {
     }
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
-    @Operation(summary = "회원 정보 수정", description = "회원 정보를 수정하는 API입니다.")
+    @Operation(summary = "회원 닉네임 수정", description = "회원 닉네임을 수정하는 API입니다.")
     @PutMapping(value = "/profile", consumes = { "multipart/form-data" })
     public CommonResponse<UserDetailResponse> updateMemberProfile(@ModelAttribute @Validated UserUpdateRequest request) {
         log.info("[UserController] 회원 정보 수정 >>>> request: {}", request);
@@ -100,11 +101,20 @@ public class MemberController {
     }
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
-    @Operation(summary = "플레이어의 ID 조회", description = "나의 id를 조회하는 API입니다.")
+    @Operation(summary = "사용자의 ID 조회", description = "나의 id를 조회하는 API입니다.")
     @GetMapping("/id")
     public CommonResponse<UserIdResponse> getUserId() {
         log.info("[UserController] 플레이어의 ID 조회");
         UserIdResponse response = userService.getMemberId();
         return CommonResponse.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "사용자 언어 변경", description = "사용자 언어를 변경하는 API입니다.")
+    @PatchMapping("/language")
+    public CommonResponse<String> updateLanguage(@RequestParam Language language) {
+        log.info("[UserController] 사용자 언어 변경 >>>> language: {}", language);
+        userService.updateLanguage(language);
+        return CommonResponse.ok("언어가 성공적으로 변경되었습니다.", null);
     }
 }

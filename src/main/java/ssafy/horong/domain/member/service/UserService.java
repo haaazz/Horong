@@ -7,6 +7,7 @@ import ssafy.horong.api.member.response.UserSignupResponse;
 import ssafy.horong.domain.member.command.MemberSignupCommand;
 import ssafy.horong.domain.member.command.PasswordUpdateCommand;
 import ssafy.horong.domain.member.command.UpdateProfileCommand;
+import ssafy.horong.domain.member.common.Language;
 
 public interface UserService {
     UserSignupResponse signupMember(MemberSignupCommand signupCommand);
@@ -18,5 +19,6 @@ public interface UserService {
     boolean checkUserId(String userId);
     void updateMemberPassword(PasswordUpdateCommand command);
     UserIdResponse getMemberId();
+    void updateLanguage(Language language);
 
 }

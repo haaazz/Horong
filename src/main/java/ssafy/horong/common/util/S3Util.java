@@ -2,8 +2,6 @@ package ssafy.horong.common.util;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,6 +17,7 @@ import ssafy.horong.common.exception.s3.S3UploadFailedException;
 import ssafy.horong.common.properties.S3Properties;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.time.Duration;
@@ -44,7 +43,7 @@ public class S3Util {
         }
     }
 
-    private static String getS3FileName(MultipartFile image, String text, String location) {
+    private static String getS3FileName(MultipartFile image, String fileName, String location) {
         String originalFilename = image.getOriginalFilename();
         String extension = "";
 
@@ -54,15 +53,16 @@ public class S3Util {
 
         validateFileExtension(extension);
 
-        return location + text + extension;
+        return location + fileName + extension;
     }
 
-    public String uploadImageToS3(MultipartFile imageFile, String text, String location) {
-        try {
-            String fileName = getS3FileName(imageFile, text, location);
-            amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), fileName, imageFile.getInputStream(), null));
-            return fileName; // 객체 키만 반환
+    public String uploadToS3(MultipartFile imageFile, String fileName, String location) {
+        String s3FileName = getS3FileName(imageFile, fileName, location); // S3에 업로드할 파일명 생성
+        try (InputStream inputStream = imageFile.getInputStream()) { // try-with-resources 사용
+            amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), s3FileName, inputStream, null));
+            return s3FileName; // 객체 키만 반환
         } catch (IOException e) {
+            log.error("S3 업로드 실패: {}", e.getMessage());
             throw new S3UploadFailedException();
         }
     }
