@@ -22,7 +22,7 @@ public record CreatePostRequest(
         @Schema(description = "게시판 타입", example = "FREE")
         BoardType boardType,
 
-        @Schema(description = "이미지 경로", example = "[{\"imageUrl\": \"http://example.com/image1.jpg\"}, {\"imageUrl\": \"http://example.com/image2.jpg\"}]")
+        @Schema(description = "이미지 경로", example = "[{\"imageUrl\": \"https://horong-service.s3.ap-northeast-2.amazonaws.com/community/d0a0345b-a10e-4021-afd2-c81f29d0f070.png\"}, {\"imageUrl\": \"https://horong-service.s3.ap-northeast-2.amazonaws.com/community/d0a0345b-a10e-4021-afd2-c81f29d0f070.png\"}]")
         List<ContentImageRequest> contentImageRequest
 ) {
         public CreatePostCommand toCommand() {
