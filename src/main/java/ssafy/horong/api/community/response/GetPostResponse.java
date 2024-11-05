@@ -18,6 +18,9 @@ public record GetPostResponse(
         @Schema(description = "게시글 국가별 콘텐츠 리스트")
         String contents,
 
+        @Schema(description = "게시글 작성 일시", example = "2021-07-01 00:00:00")
+        String createdAt,
+
         @Schema(description = "댓글 리스트")
         List<GetCommentResponse> comments
 ) {}

@@ -28,17 +28,17 @@ public class Comment {
     private User author;
 
     @Column(nullable = false)
-    private LocalDateTime createdDate;
+    private LocalDateTime createdAt;
 
-    private LocalDateTime updatedDate;
+    private LocalDateTime updatedAt;
 
-    private LocalDateTime deletedDate;
+    private LocalDateTime deletedAt;
 
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL)
     private List<ContentByLanguage> contentByCountries;
 
     @PrePersist
     protected void onCreate() {
-        createdDate = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
     }
 }

@@ -14,6 +14,9 @@ public record GetCommentResponse(
         String nickname,
 
         @Schema(description = "댓글의 언어별 콘텐츠", example = "댓글입니다.")
-        String contents
+        String contents,
+
+        @Schema(description = "댓글 작성 일시", example = "2021-07-01 00:00:00")
+        String createdDate
 ) {
 }
