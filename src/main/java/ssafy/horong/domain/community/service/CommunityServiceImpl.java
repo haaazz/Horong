@@ -276,7 +276,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         List<ContentByLanguage> contentByCountries = command.contentByCountries().stream()
                 .map(contentRequest -> ContentByLanguage.builder()
-                        .language(contentRequest.language())
+                        .language(Optional.ofNullable(contentRequest.language()).orElse(null)) // language가 null이면 그대로 null을 사용
                         .content(contentRequest.content())
                         .isOriginal(contentRequest.isOriginal())
                         .comment(comment)
@@ -409,7 +409,7 @@ public class CommunityServiceImpl implements CommunityService {
     public void sendMessage(SendMessageCommand command) {
         List<ContentByLanguage> contentByCountries = command.contentsByLanguages().stream()
                 .map(contentByLanguageCommand -> ContentByLanguage.builder()
-                        .language(contentByLanguageCommand.language())
+                        .language(Optional.ofNullable(contentByLanguageCommand.language()).orElse(null))
                         .content(contentByLanguageCommand.content())
                         .build())
                 .toList();
