@@ -6,7 +6,7 @@ import ssafy.horong.domain.member.common.Language;
 public record MemberSignupCommand(
         String nickname,
         String password,
-        MultipartFile imageUrl,
+//        MultipartFile imageUrl,
         String userId,
         Language language
 ) {

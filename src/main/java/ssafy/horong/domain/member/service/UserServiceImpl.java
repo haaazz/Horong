@@ -81,8 +81,9 @@ public class UserServiceImpl implements UserService {
         log.info("[Timing] 유저 저장 소요 시간: {} ms", afterUserSave - afterUserCreation);
 
         // 4. 프로필 이미지 처리
-        MultipartFile imageFile = signupCommand.imageUrl();
-        String imageUrl = handleProfileImage(imageFile, userToSave.getId(), userToSave.getProfileImg());
+//        MultipartFile imageFile = signupCommand.imageUrl();
+//        String imageUrl = handleProfileImage(imageFile, userToSave.getId(), userToSave.getProfileImg());
+        String imageUrl = S3_IMAGE.DEFAULT_URL;
         userToSave.setProfileImg(imageUrl);
         userRepository.save(userToSave); // 프로필 이미지 업데이트 후 다시 저장
         long afterProfileImage = System.currentTimeMillis();
@@ -366,11 +367,11 @@ public class UserServiceImpl implements UserService {
                 throw new ForbiddenWordContainedException();
             }
         }
-        if (command.language() != null) {
-            if (!isValidLanguage(command.language())) {
-                throw new LanguageNotValidExeption();
-            }
-        }
+//        if (command.language() != null) {
+//            if (!isValidLanguage(command.language())) {
+//                throw new LanguageNotValidExeption();
+//            }
+//        }
     }
 
     private boolean isValidLanguage(Language language) {

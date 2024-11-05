@@ -11,8 +11,8 @@ public record UserSignupRequest(
         @Schema(description = "닉네임", example = "쿠잉비", minimum = "2", maximum = "20")
         String nickname,
 
-        @Schema(description = "프로필 이미지 파일", example = "profile.jpg")
-        MultipartFile image,
+//        @Schema(description = "프로필 이미지 파일", example = "profile.jpg")
+//        MultipartFile image,
 
         @Schema(description = "비밀번호", example = "password123!")
         String password,
@@ -24,6 +24,6 @@ public record UserSignupRequest(
         Language language
 ){
         public MemberSignupCommand toCommand() {
-                return new MemberSignupCommand(nickname, password, image, userId, language);
+                return new MemberSignupCommand(nickname, password, userId, language);
         }
 }
