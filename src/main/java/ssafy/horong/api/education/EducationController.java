@@ -33,9 +33,8 @@ public class EducationController {
     }
 
     @Operation(summary = "한국어 학습 기록", description = "한국어 학습 기록을 저장하는 API입니다.")
-    @PostMapping("/record", consumes = { "multipart/form-data" })
+    @PostMapping(value = "/record", consumes = { "multipart/form-data" })
     public CommonResponse<?> saveEducationRecord(@ModelAttribute @Validated SaveEduciatonRecordRequest request) {
         return CommonResponse.ok(educationService.saveEducationRecord(request.toCommand()));
     }
-
 }
