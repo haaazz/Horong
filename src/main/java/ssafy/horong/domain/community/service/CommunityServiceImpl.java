@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.safety.Safelist;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
@@ -618,4 +619,60 @@ public class CommunityServiceImpl implements CommunityService {
                 .replace("\"", "&quot;")
                 .replace("'", "&#x27;");
     }
+
+    public Map<BoardType, List<GetPostResponse>> getMainPostList() {
+        log.info("게시판별 게시글 리스트 조회");
+
+        // 결과를 담을 Map 생성
+        Map<BoardType, List<GetPostResponse>> mainPostList = new HashMap<>();
+
+        // 각 BoardType에 대한 게시글을 조회하고 Map에 추가
+        mainPostList.put(BoardType.NOTICE, getPostsByBoardType(BoardType.NOTICE, 3));
+        mainPostList.put(BoardType.FREE, getPostsByBoardType(BoardType.FREE, 6));
+        mainPostList.put(BoardType.SEOUL, getPostsByBoardType(BoardType.SEOUL, 1));
+        mainPostList.put(BoardType.BUSAN, getPostsByBoardType(BoardType.BUSAN, 1));
+        mainPostList.put(BoardType.INCHEON, getPostsByBoardType(BoardType.INCHEON, 1));
+        mainPostList.put(BoardType.GYEONGGI, getPostsByBoardType(BoardType.GYEONGGI, 1));
+
+        return mainPostList;
+    }
+
+    private List<GetPostResponse> getPostsByBoardType(BoardType boardType, int limit) {
+        log.info("특정 게시판 타입별 게시글 조회: {}", boardType);
+
+        // 현재 사용자의 언어 가져오기
+        Language language = getCurrentUser().getLanguage();
+
+        return postRepository.findTopByBoardTypeOrderByCreatedDateDesc(boardType, PageRequest.of(0, limit))
+                .stream()
+                .filter(post -> post.getDeletedDate() == null)
+                .map(post -> {
+                    // 언어별 콘텐츠 필터링
+                    String content = post.getContentByCountries().stream()
+                            .filter(c -> c.getLanguage() == language)
+                            .findFirst()
+                            .map(ContentByLanguage::getContent)
+                            .orElseThrow(PostNotFoundException::new);
+
+                    String title = post.getContentByCountries().stream()
+                            .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.TITLE)
+                            .findFirst()
+                            .map(ContentByLanguage::getContent)
+                            .orElseThrow(PostNotFoundException::new);
+
+                    List<GetCommentResponse> commentResponses = convertToCommentResponse(
+                            post.getComments().stream().toList()
+                    );
+
+                    return new GetPostResponse(
+                            post.getId(),
+                            title,
+                            post.getAuthor().getNickname(),
+                            content,
+                            commentResponses
+                    );
+                })
+                .toList();
+    }
+
 }

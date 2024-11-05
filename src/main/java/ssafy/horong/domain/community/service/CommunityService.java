@@ -7,9 +7,11 @@ import ssafy.horong.api.community.response.GetAllMessageListResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
 import ssafy.horong.domain.community.command.*;
+import ssafy.horong.domain.community.entity.BoardType;
 import ssafy.horong.domain.community.entity.Notification;
 
 import java.util.List;
+import java.util.Map;
 
 public interface CommunityService {
     void createPost(CreatePostCommand command);
@@ -25,4 +27,5 @@ public interface CommunityService {
     List<GetMessageListResponse> getMessageList(GetMessageListCommand command);
     List<GetAllMessageListResponse> getAllMessageList();
     String saveImageToS3(MultipartFile file);
+    Map<BoardType, List<GetPostResponse>> getMainPostList();
 }
