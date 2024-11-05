@@ -77,7 +77,7 @@ public class CommunityServiceImpl implements CommunityService {
                     ContentByLanguage titleEntity = ContentByLanguage.builder()
                             .content(c.title()) // 제목
                             .isOriginal(c.isOriginal())
-                            .language(c.language())
+                            .language(Optional.ofNullable(c.language()).orElse(null))
                             .contentType(ContentByLanguage.ContentType.TITLE)
                             .build();
                     titleEntity.setPost(post); // Post 설정

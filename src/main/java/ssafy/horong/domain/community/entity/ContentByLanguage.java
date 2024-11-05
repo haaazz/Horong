@@ -31,7 +31,6 @@ public class ContentByLanguage {
     private Comment comment;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Language language;
 
     @Column(length = 1000, nullable = false)
