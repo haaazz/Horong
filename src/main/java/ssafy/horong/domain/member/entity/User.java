@@ -78,9 +78,8 @@ public class User {
         this.language = language;
     }
 
-    public void updateProfile(String nickname, String profileImagePath) {
+    public void updateProfile(String nickname) {
         this.nickname = nickname;
-        this.profileImg = profileImagePath;
     }
 
     public void updatePassword(String newPassword) {

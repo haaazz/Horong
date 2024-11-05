@@ -147,20 +147,20 @@ public class UserServiceImpl implements UserService {
         validateUpdateProfileCommand(command);
         User currentUser = getCurrentLoggedInMember();
 
-        MultipartFile profileImageFile = command.profileImagePath();
-        String imageUrl = S3_IMAGE.DEFAULT_URL;
-        if (!command.deleteImage()) {
-            imageUrl = handleProfileImage(profileImageFile, currentUser.getId(), currentUser.getProfileImg());
-        }// MultipartFile로 변경`
-        String preSignedUrl = generatePreSignedUrl(imageUrl);
+//        MultipartFile profileImageFile = command.profileImagePath();
+//        String imageUrl = S3_IMAGE.DEFAULT_URL;
+//        if (!command.deleteImage()) {
+//            imageUrl = handleProfileImage(profileImageFile, currentUser.getId(), currentUser.getProfileImg());
+//        }// MultipartFile로 변경`
+//        String preSignedUrl = generatePreSignedUrl(imageUrl);
 
         String updatedNickname = getUpdatedField(command.nickname(), currentUser.getNickname());
 
-        currentUser.updateProfile(updatedNickname, imageUrl);
+        currentUser.updateProfile(updatedNickname);
         userRepository.save(currentUser);
 
         return UserDetailResponse.of(
-                preSignedUrl,
+                currentUser.getProfileImg(),
                 currentUser.getNickname()
         );
     }
