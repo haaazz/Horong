@@ -19,6 +19,6 @@ public class ContentImage {
     @JoinColumn(name = "content_id", nullable = false)
     private ContentByLanguage content;
 
-    @Column(length = 40)
+    @Column(length = 65)
     private String imageUrl;
 }

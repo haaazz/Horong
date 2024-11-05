@@ -19,9 +19,11 @@ import ssafy.horong.api.community.response.GetAllMessageListResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
 import ssafy.horong.api.health.TestRequest;
+import ssafy.horong.domain.community.entity.BoardType;
 import ssafy.horong.domain.community.service.CommunityService;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -156,12 +158,12 @@ public class CommunityController {
         return CommonResponse.ok(imageUrl);
     }
 
-//    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
-//    @Operation(summary = "게시판 메인 리스트 조회", description = "게시판 메인 리스트를 조회하는 API입니다.")
-//    @GetMapping("/main")
-//    public CommonResponse<List<GetPostResponse>> getMainPostList() {
-//        log.info("[CommunityController] 게시판 메인 리스트 조회");
-//        List<GetPostResponse> response = communityService.getMainPostList();
-//        return CommonResponse.ok(response);
-//    }
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "게시판 메인 리스트 조회", description = "게시판 메인 리스트를 조회하는 API입니다.")
+    @GetMapping("/main")
+    public CommonResponse<Map<BoardType, List<GetPostResponse>>> getMainPostList() {
+        log.info("[CommunityController] 게시판 메인 리스트 조회");
+        Map<BoardType, List<GetPostResponse>> response = communityService.getMainPostList();
+        return CommonResponse.ok(response);
+    }
 }
