@@ -91,7 +91,7 @@ public class CommunityServiceImpl implements CommunityService {
                     ContentByLanguage contentEntity = ContentByLanguage.builder()
                             .content(c.content()) // 내용
                             .isOriginal(c.isOriginal())
-                            .language(c.language())
+                            .language(Optional.ofNullable(c.language()).orElse(null))
                             .contentType(ContentByLanguage.ContentType.CONTENT)
                             .contentImages(contentImages) // 이미지 포함
                             .build();
@@ -113,12 +113,16 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     private void savePostDocument(Post post, List<CreateContentByLanguageRequest> contentByCountries) {
+
         PostDocument postDocument = PostDocument.builder()
                 .postId(post.getId())
                 .author(post.getAuthor().getNickname())
                 .build();
 
         contentByCountries.forEach(contentByLanguage -> {
+            if (contentByLanguage.language() == null) {
+                return;
+            }
             String language = contentByLanguage.language().name();
 
             // 언어에 따라 제목 및 콘텐츠 설정
@@ -164,7 +168,7 @@ public class CommunityServiceImpl implements CommunityService {
                     ContentByLanguage contentByLanguage = ContentByLanguage.builder()
                             .content(c.content())
                             .isOriginal(c.isOriginal())
-                            .language(c.language())
+                            .language(Optional.ofNullable(c.language()).orElse(null))
                             .contentType(ContentByLanguage.ContentType.CONTENT)
                             .contentImages(contentImages)
                             .post(post)
@@ -343,7 +347,7 @@ public class CommunityServiceImpl implements CommunityService {
             command.contentByCountries().forEach(contentRequest -> {
                 ContentByLanguage content = ContentByLanguage.builder()
                         .comment(comment)
-                        .language(contentRequest.language())
+                        .language(Optional.ofNullable(contentRequest.language()).orElse(null))
                         .content(contentRequest.content())
                         .isOriginal(contentRequest.isOriginal())
                         .build();
