@@ -84,7 +84,7 @@ public class MemberController {
     }
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
-    @Operation(summary = "회원 정보 수정", description = "회원 정보를 수정하는 API입니다.")
+    @Operation(summary = "회원 닉네임 수정", description = "회원 닉네임을 수정하는 API입니다.")
     @PutMapping(value = "/profile", consumes = { "multipart/form-data" })
     public CommonResponse<UserDetailResponse> updateMemberProfile(@ModelAttribute @Validated UserUpdateRequest request) {
         log.info("[UserController] 회원 정보 수정 >>>> request: {}", request);
