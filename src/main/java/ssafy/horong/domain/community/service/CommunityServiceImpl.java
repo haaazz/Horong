@@ -67,14 +67,16 @@ public class CommunityServiceImpl implements CommunityService {
                 .build();
         log.info("이미지 경로 {}", command.contentImageRequest());
 
+        // URL에서 "community/" 이후의 부분만 리스트로 저장
         List<ContentImage> contentImages = command.contentImageRequest().stream()
                 .map(ContentImageRequest::imageUrl)
-                .map(imageUrl -> {
-                    String trimmedUrl = imageUrl.substring(imageUrl.indexOf("community/"));
-                    return ContentImage.builder().imageUrl(trimmedUrl).build();
-                })
+                .map(imageUrl -> imageUrl.substring(imageUrl.indexOf("community/")))
+                .map(trimmedUrl -> ContentImage.builder().imageUrl(trimmedUrl).build())
                 .toList();
-        log.info("이미지 경로: {}", contentImages);
+
+        log.info("이미지 경로 리스트: {}", contentImages.stream()
+                .map(ContentImage::getImageUrl)
+                .toList()); // 저장된 이미지 URL 리스트 로그 출력
 
         // ContentByLanguage 리스트 변환 (내용과 제목 모두 처리)
         List<ContentByLanguage> contentEntities = command.content().stream()
@@ -89,8 +91,6 @@ public class CommunityServiceImpl implements CommunityService {
                     titleEntity.setPost(post); // Post 설정
 
                     // 내용 ContentByLanguage 생성
-
-
                     ContentByLanguage contentEntity = ContentByLanguage.builder()
                             .content(c.content()) // 내용
                             .isOriginal(c.isOriginal())
@@ -114,6 +114,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         savePostDocument(post, command.content()); // Elasticsearch에 PostDocument 저장
     }
+
 
     private void savePostDocument(Post post, List<CreateContentByLanguageRequest> contentByCountries) {
 
