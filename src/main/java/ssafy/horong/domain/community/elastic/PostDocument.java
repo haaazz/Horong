@@ -16,6 +16,7 @@ public class PostDocument {
     private String id;  // 고유 ID: "postId-language" 형식 사용
     private Long postId; // 실제 게시물 ID
     private String author; // 작성자
+    private Long authorId; // 작성자 ID
 
     @Field(type = FieldType.Text, analyzer = "nori") // 한국어 분석기
     private String titleKo; // 한국어 제목

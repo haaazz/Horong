@@ -442,6 +442,7 @@ public class CommunityServiceImpl implements CommunityService {
                 post.getId(),
                 title,
                 post.getAuthor().getNickname(),
+                post.getAuthor().getId(),
                 content,
                 post.getCreatedAt().toString(),
                 commentResponses
@@ -479,6 +480,7 @@ public class CommunityServiceImpl implements CommunityService {
                             post.getId(),
                             title,
                             post.getAuthor().getNickname(),
+                            post.getAuthor().getId(),
                             content,
                             post.getCreatedAt().toString(),
                             commentResponses
@@ -528,6 +530,7 @@ public class CommunityServiceImpl implements CommunityService {
                             postDocument.getPostId(),
                             title,
                             postDocument.getAuthor(),
+                            userRepository.findByNicknameAndIsDeletedFalse(postDocument.getAuthor()).orElse(null).getId(),
                             content,
                             boardRepository.findById(postDocument.getPostId()).orElse(null).getCreatedAt().toString(),
                             List.of()
@@ -599,6 +602,7 @@ public class CommunityServiceImpl implements CommunityService {
                             post.getId(),
                             title,
                             post.getAuthor().getNickname(),
+                            post.getAuthor().getId(),
                             content,
                             post.getCreatedAt().toString(),
                             commentResponses
@@ -668,6 +672,7 @@ public class CommunityServiceImpl implements CommunityService {
                                 null, // 삭제된 댓글의 ID
                                 "deleted", // 삭제된 닉네임
                                 null,
+                                null,
                                 "삭제된 댓글입니다." // 삭제된 댓글 내용
                         );
                     }
@@ -681,6 +686,7 @@ public class CommunityServiceImpl implements CommunityService {
                     return new GetCommentResponse(
                             comment.getId(),
                             comment.getAuthor().getNickname(),
+                            comment.getAuthor().getId(),
                             content,
                             comment.getCreatedAt().toString()
                     );
