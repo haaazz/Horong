@@ -16,5 +16,8 @@ public record ContentByCountryResponse(
         String country,
 
         @Schema(description = "콘텐츠 이미지 리스트", example = "[\"https://my-bucket.s3.amazonaws.com/image1.jpg\", \"https://my-bucket.s3.amazonaws.com/image2.jpg\"]")
-        List<String> imageList
+        List<String> imageList,
+
+        @Schema(description = "작성시간", example = "2021-07-01T00:00:00")
+        String createdAt
 ) {}
