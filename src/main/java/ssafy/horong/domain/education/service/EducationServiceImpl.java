@@ -9,6 +9,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import ssafy.horong.api.education.response.EducationRecordResponse;
 import ssafy.horong.api.education.response.GetEducationRecordResponse;
+import ssafy.horong.api.education.response.SaveEducationResponseFromData;
 import ssafy.horong.api.education.response.TodayWordsResponse;
 import ssafy.horong.common.exception.data.DataNotFoundException;
 import ssafy.horong.common.properties.WebClientProperties;
@@ -24,6 +25,7 @@ import ssafy.horong.domain.education.repository.EducationRepository;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -64,6 +66,8 @@ public class EducationServiceImpl implements EducationService {
                     record.getId(),
                     record.getEducation(),
                     record.getCer(),
+                    record.getGtIdx(),
+                    record.getHypIdx(),
                     record.getDate(),
                     s3Util.getS3UrlFromS3(record.getAudio())
             );
@@ -83,31 +87,28 @@ public class EducationServiceImpl implements EducationService {
     }
 
     @Transactional
-    public float saveEducationRecord(SaveEduciatonRecordCommand command) {
+    public EducationRecordResponse saveEducationRecord(SaveEduciatonRecordCommand command) {
+        // Education 및 userId 가져오기
         Education education = educationRepository.findByWord(command.word());
-//        Long educationId = education.getId();
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
-
-        // 마지막 recordIndex 값 조회 및 +1 증가하여 고유한 값 설정
-//        int recordIndex = educationRecordRepository.findMaxRecordIndexByEducationIdAndUserId(educationId, userId)
-//                .map(index -> index + 1)
-//                .orElse(0);
         UUID recordIndex = UUID.randomUUID();
-        // S3에 업로드
+
+        // S3에 오디오 파일 업로드
         String location = s3Util.uploadToS3(command.audio(), command.word() + "/" + userId + "/" + recordIndex, "education/");
 
-        // EducationRecord 저장
+        // 임시 값으로 EducationRecord 생성
         EducationRecord educationRecord = EducationRecord.builder()
                 .education(education)
                 .audio(location)
                 .cer(0) // 임시 값
                 .build();
 
-        // 외부 서버 요청
+        // 외부 서버 요청하여 cer 값을 받아옴
         String requestUrl = webClientProperties.url();
-        float score = webClient.post()
+        SaveEducationResponseFromData dataResponse = webClient.post()
                 .uri(requestUrl)
                 .body(BodyInserters.fromValue(Map.of(
+                        "word", command.word(),
                         "url", s3Util.getS3UrlFromS3(location)
                 )))
                 .retrieve()
@@ -117,15 +118,23 @@ public class EducationServiceImpl implements EducationService {
                                 .defaultIfEmpty("Unknown error")
                                 .flatMap(errorBody -> Mono.error(new DataNotFoundException()))
                 )
-                .bodyToMono(float.class)
+                .bodyToMono(SaveEducationResponseFromData.class)
                 .blockOptional()
                 .orElseThrow(DataNotFoundException::new);
 
-        // CER 값 설정 후 저장
-        educationRecord.setCer(score);
+        // 받은 CER 값을 설정하고 DB에 저장
+        educationRecord.setCer(dataResponse.cer());
         educationRecordRepository.save(educationRecord);
 
-        return score;
+        // EducationRecordResponse 객체를 생성하여 반환
+        return new EducationRecordResponse(
+                educationRecord.getId(),
+                educationRecord.getEducation(),
+                educationRecord.getCer(),
+                educationRecord.getGtIdx(),
+                educationRecord.getHypIdx(),
+                educationRecord.getDate(),
+                URI.create(location)
+        );
     }
-
 }

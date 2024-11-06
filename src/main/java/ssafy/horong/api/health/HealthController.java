@@ -110,7 +110,7 @@ public class HealthController {
     public CommonResponse<String> checkDataServerConnection() {
         log.info("[HealthController] 데이터 서버 연결 확인");
 
-        String requestUrl = webClientProperties.url() + "name" + "/";
+        String requestUrl = webClientProperties.url() + "education" + "/";
 
         String response = webClient.get()
                 .uri(requestUrl)

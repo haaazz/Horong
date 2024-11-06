@@ -277,8 +277,8 @@ public class CommunityServiceImpl implements CommunityService {
 
             // 삭제할 항목 처리 (기존 리스트에 있지만 새 요청에 없는 항목)
             existingContentByCountries.removeIf(existingContent ->
-                    command.contentByCountries().stream()
-                            .noneMatch(contentRequest -> contentRequest.language().equals(existingContent.getLanguage()))
+                    existingContent.getLanguage() != null && command.contentByCountries().stream()
+                            .noneMatch(contentRequest -> contentRequest.language() != null && contentRequest.language().equals(existingContent.getLanguage()))
             );
         }
 
