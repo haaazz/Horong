@@ -1,9 +1,6 @@
 package ssafy.horong.api.community.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import ssafy.horong.domain.community.entity.ContentByLanguage;
-
-import java.util.List;
 
 @Schema(description = "댓글 응답 DTO")
 public record GetCommentResponse(

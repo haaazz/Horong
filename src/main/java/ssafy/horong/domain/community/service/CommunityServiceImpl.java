@@ -1,5 +1,6 @@
 package ssafy.horong.domain.community.service;
 
+import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.safety.Safelist;
@@ -9,6 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.ResourceNotFoundException;
+import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.jsoup.Jsoup;
@@ -375,7 +377,9 @@ public class CommunityServiceImpl implements CommunityService {
                     return new GetAllMessageListResponse(
                             unreadCount,
                             lastContent,
-                            sender.getNickname()
+                            sender.getNickname(),
+                            sender.getId(),
+                            lastMessage.getCreatedAt().toString()
                     );
                 })
                 .sorted(Comparator.comparing((GetAllMessageListResponse response) -> {
@@ -411,7 +415,7 @@ public class CommunityServiceImpl implements CommunityService {
                     messageRepository.save(message);
 
                     log.info("읽음여부 {}, {}", message.isRead(), message.getId());
-                    return new GetMessageListResponse(content, message.getSender().getNickname());
+                    return new GetMessageListResponse(content, message.getSender().getNickname(), message.getSender().getId(), message.getCreatedAt().toString());
                 })
                 .toList();
     }
@@ -718,6 +722,7 @@ public class CommunityServiceImpl implements CommunityService {
         PostDocument postDocument = PostDocument.builder()
                 .postId(post.getId())
                 .author(post.getAuthor().getNickname())
+                .authorId(post.getAuthor().getId())
                 .build();
 
         contentByCountries.forEach(contentByLanguage -> {
