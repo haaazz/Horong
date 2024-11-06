@@ -2,9 +2,10 @@ package ssafy.horong.domain.education.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import ssafy.horong.common.util.ListToStringConverter;
 
 import java.time.LocalDate;
-import java.util.Date;
+import java.util.List;
 
 @Entity
 @Table(name = "education_record")
@@ -34,9 +35,14 @@ public class EducationRecord {
     @Column(length = 255, nullable = false)
     private String audio; // S3 링크
 
+    @Convert(converter = ListToStringConverter.class)
+    private List<Integer> gtIdx;
+
+    @Convert(converter = ListToStringConverter.class)
+    private List<Integer> hypIdx;
+
     @PrePersist
     public void prePersist() {
         this.date = LocalDate.now();
     }
-
 }
