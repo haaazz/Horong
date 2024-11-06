@@ -122,29 +122,53 @@ public class CommunityServiceImpl implements CommunityService {
         Post post = postRepository.findById(command.postId())
                 .orElseThrow(PostNotFoundException::new);
 
-        List<ContentImage> contentImages = command.contentImageRequest().stream()
-                .map(ContentImageRequest::imageUrl)
-                .map(imageUrl -> ContentImage.builder().imageUrl(imageUrl).build())
-                .toList();
-
-        List<ContentByLanguage> contentEntities = command.content().stream()
+        List<ContentByLanguage> updatedContentEntities = command.content().stream()
                 .map(c -> {
+                    // 기존 ContentByLanguage 엔터티를 찾기
+                    ContentByLanguage existingContent = post.getContentByCountries().stream()
+                            .filter(content -> content.getLanguage() != null && content.getLanguage().equals(c.language()))
+                            .findFirst()
+                            .orElseGet(() -> ContentByLanguage.builder()
+                                    .post(post)
+                                    .language(c.language())
+                                    .contentType(ContentByLanguage.ContentType.CONTENT)
+                                    .build());
 
-                    ContentByLanguage contentByLanguage = ContentByLanguage.builder()
-                            .content(c.content())
-                            .isOriginal(c.isOriginal())
-                            .language(Optional.ofNullable(c.language()).orElse(null))
-                            .contentType(ContentByLanguage.ContentType.CONTENT)
-                            .contentImages(contentImages)
-                            .post(post)
-                            .build();
+                    // 기존 엔터티의 필드 업데이트
+                    existingContent.setContent(c.content());
+                    existingContent.setOriginal(c.isOriginal());
 
-                    contentImages.forEach(contentImage -> contentImage.setContent(contentByLanguage));
-                    return contentByLanguage;
+                    // 기존 ContentImage 수정 또는 새로 추가
+                    List<ContentImage> existingImages = existingContent.getContentImages();
+                    List<String> newImageUrls = command.contentImageRequest().stream()
+                            .map(ContentImageRequest::imageUrl)
+                            .toList();
+
+                    // 기존 이미지 매핑
+                    existingImages.forEach(image -> {
+                        if (!newImageUrls.contains(image.getImageUrl())) {
+                            image.setImageUrl(null); // 혹은 삭제 로직 추가
+                        }
+                    });
+
+                    // 새로운 이미지 추가
+                    newImageUrls.forEach(imageUrl -> {
+                        if (existingImages.stream().noneMatch(image -> image.getImageUrl().equals(imageUrl))) {
+                            ContentImage newImage = ContentImage.builder()
+                                    .imageUrl(imageUrl)
+                                    .content(existingContent)
+                                    .build();
+                            existingImages.add(newImage);
+                        }
+                    });
+
+                    existingContent.setContentImages(existingImages);
+
+                    return existingContent;
                 })
                 .toList();
 
-        post.setContentByCountries(contentEntities); // Post에 ContentByLanguage 설정
+        post.setContentByCountries(updatedContentEntities); // Post에 ContentByLanguage 설정
         postRepository.save(post); // Post 저장
         postElasticsearchRepository.deleteById(String.valueOf(post.getId())); // Elasticsearch에서 기존 PostDocument 삭제
         savePostDocument(post, command.content()); // Elasticsearch에 새로운 PostDocument 저장
@@ -232,22 +256,38 @@ public class CommunityServiceImpl implements CommunityService {
         validateUserOrAdmin(comment.getAuthor());
 
         if (command.contentByCountries() != null && !command.contentByCountries().isEmpty()) {
-            comment.getContentByCountries().clear();
+            List<ContentByLanguage> existingContentByCountries = comment.getContentByCountries();
 
             command.contentByCountries().forEach(contentRequest -> {
-                ContentByLanguage content = ContentByLanguage.builder()
-                        .comment(comment)
-                        .language(Optional.ofNullable(contentRequest.language()).orElse(null))
-                        .content(contentRequest.content())
-                        .isOriginal(contentRequest.isOriginal())
-                        .build();
-                comment.getContentByCountries().add(content);
+                // 기존 ContentByLanguage 엔터티를 찾기
+                ContentByLanguage existingContent = existingContentByCountries.stream()
+                        .filter(content -> content.getLanguage() != null && content.getLanguage().equals(contentRequest.language()))
+                        .findFirst()
+                        .orElseGet(() -> {
+                            ContentByLanguage newContent = ContentByLanguage.builder()
+                                    .comment(comment)
+                                    .language(contentRequest.language())
+                                    .build();
+                            existingContentByCountries.add(newContent);
+                            return newContent;
+                        });
+
+                // 기존 엔터티의 필드 업데이트
+                existingContent.setContent(contentRequest.content());
+                existingContent.setOriginal(contentRequest.isOriginal());
             });
+
+            // 삭제할 항목 처리 (기존 리스트에 있지만 새 요청에 없는 항목)
+            existingContentByCountries.removeIf(existingContent ->
+                    command.contentByCountries().stream()
+                            .noneMatch(contentRequest -> contentRequest.language().equals(existingContent.getLanguage()))
+            );
         }
 
         comment.setUpdatedAt(LocalDateTime.now());
         commentRepository.save(comment);
     }
+
 
     @Transactional
     @Override
