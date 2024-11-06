@@ -15,6 +15,9 @@ public record GetPostResponse(
         @Schema(description = "게시글 작성자 닉네임", example = "호롱")
         String nickname,
 
+        @Schema(description = "작성자 ID", example = "1")
+        Long userId,
+
         @Schema(description = "게시글 국가별 콘텐츠 리스트")
         String contents,
 
