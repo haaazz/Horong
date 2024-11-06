@@ -25,10 +25,7 @@ import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.elastic.PostDocument;
 import ssafy.horong.domain.community.entity.*;
 import ssafy.horong.api.community.request.ContentImageRequest;
-import ssafy.horong.domain.community.repository.BoardRepository;
-import ssafy.horong.domain.community.repository.CommentRepository;
-import ssafy.horong.domain.community.repository.MessageRepository;
-import ssafy.horong.domain.community.repository.NotificationRepository;
+import ssafy.horong.domain.community.repository.*;
 import ssafy.horong.domain.member.common.Language;
 import ssafy.horong.domain.member.common.MemberRole;
 import ssafy.horong.domain.member.entity.User;
@@ -55,6 +52,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final NotificationUtil notificationUtil; // NotificationUtil 추가
     private final S3Util s3Util;
     private final BoardRepository boardRepository;
+    private final ContentImageRepository contentImageRepository;
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -124,36 +122,34 @@ public class CommunityServiceImpl implements CommunityService {
 
         List<ContentByLanguage> updatedContentEntities = command.content().stream()
                 .map(c -> {
-                    // 기존 ContentByLanguage 엔터티를 찾기
                     ContentByLanguage existingContent = post.getContentByCountries().stream()
                             .filter(content -> content.getLanguage() != null && content.getLanguage().equals(c.language()))
                             .findFirst()
-                            .orElseGet(() -> ContentByLanguage.builder()
-                                    .post(post)
-                                    .language(c.language())
-                                    .contentType(ContentByLanguage.ContentType.CONTENT)
-                                    .build());
+                            .orElseGet(() -> {
+                                ContentByLanguage newContent = ContentByLanguage.builder()
+                                        .post(post)
+                                        .language(c.language())
+                                        .contentType(ContentByLanguage.ContentType.CONTENT)
+                                        .build();
+                                post.getContentByCountries().add(newContent);
+                                return newContent;
+                            });
 
-                    // 기존 엔터티의 필드 업데이트
                     existingContent.setContent(c.content());
                     existingContent.setOriginal(c.isOriginal());
 
-                    // 기존 ContentImage 수정 또는 새로 추가
+                    // 기존 이미지를 삭제하고 새 이미지 추가하는 대신 리스트를 직접 수정
                     List<ContentImage> existingImages = existingContent.getContentImages();
                     List<String> newImageUrls = command.contentImageRequest().stream()
                             .map(ContentImageRequest::imageUrl)
                             .map(imageUrl -> imageUrl.substring(imageUrl.indexOf("community/")))
-                            .toList();
+                            .collect(Collectors.toList());
 
-                    // 기존 이미지 매핑
-                    existingImages.forEach(image -> {
-                        if (!newImageUrls.contains(image.getImageUrl())) {
-                            image.setImageUrl(null); // 혹은 삭제 로직 추가
-                        }
-                    });
+                    // 새로운 URL에 해당하지 않는 기존 이미지를 제거
+                    existingImages.removeIf(image -> !newImageUrls.contains(image.getImageUrl()));
 
-                    // 새로운 이미지 추가
-                    newImageUrls.forEach(imageUrl -> {
+                    // 기존에 없는 새로운 이미지만 추가
+                    for (String imageUrl : newImageUrls) {
                         if (existingImages.stream().noneMatch(image -> image.getImageUrl().equals(imageUrl))) {
                             ContentImage newImage = ContentImage.builder()
                                     .imageUrl(imageUrl)
@@ -161,19 +157,20 @@ public class CommunityServiceImpl implements CommunityService {
                                     .build();
                             existingImages.add(newImage);
                         }
-                    });
-
-                    existingContent.setContentImages(existingImages);
+                    }
 
                     return existingContent;
                 })
-                .toList();
+                .collect(Collectors.toList());
 
-        post.setContentByCountries(updatedContentEntities); // Post에 ContentByLanguage 설정
-        postRepository.save(post); // Post 저장
-        postElasticsearchRepository.deleteById(String.valueOf(post.getId())); // Elasticsearch에서 기존 PostDocument 삭제
-        savePostDocument(post, command.content()); // Elasticsearch에 새로운 PostDocument 저장
+        post.setContentByCountries(updatedContentEntities);
+        postRepository.save(post);
+
+        // Elasticsearch에 업데이트
+        postElasticsearchRepository.deleteById(String.valueOf(post.getId()));
+        savePostDocument(post, command.content());
     }
+
 
     @Transactional
     @Override
