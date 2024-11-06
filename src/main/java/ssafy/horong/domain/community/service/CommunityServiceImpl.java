@@ -142,6 +142,7 @@ public class CommunityServiceImpl implements CommunityService {
                     List<ContentImage> existingImages = existingContent.getContentImages();
                     List<String> newImageUrls = command.contentImageRequest().stream()
                             .map(ContentImageRequest::imageUrl)
+                            .map(imageUrl -> imageUrl.substring(imageUrl.indexOf("community/")))
                             .toList();
 
                     // 기존 이미지 매핑
@@ -295,7 +296,7 @@ public class CommunityServiceImpl implements CommunityService {
         List<ContentImage> contentImages = command.contentImageRequest().stream()
                 .map(ContentImageRequest::imageUrl)
                 .map(imageUrl -> {
-                    String trimmedUrl = imageUrl.substring(imageUrl.indexOf("community/"));
+                    String trimmedUrl = imageUrl.substring(imageUrl.indexOf("message/"));
                     return ContentImage.builder().imageUrl(trimmedUrl).build();
                 })
                 .toList();

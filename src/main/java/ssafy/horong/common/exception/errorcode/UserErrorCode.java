@@ -24,7 +24,7 @@ public enum UserErrorCode implements BaseErrorCode {
     USER_NOT_FOUND(NOT_FOUND, "USER_404_1", "존재하지 않는 회원입니다."),
     PROFILE_NOT_FOUND(NOT_FOUND, "USER_404_3", "프로필 이미지를 찾을 수 없습니다."),
     VERIFICATION_FAILURE(NOT_FOUND, "USER_404_4", "인증에 실패하였습니다."),
-    EMAIL_NOT_FOUND(NOT_FOUND, "USER_404_5", "존재하지 않는 이메일입니다."),
+    EMAIL_NOT_FOUND(NOT_FOUND, "USER_404_5", "존재하지 않는 사용자입니다."),
 
     USER_ALREADY_DELETED(CONFLICT, "USER_409_1", "이미 삭제된 회원입니다."),
     FORBIDDEN_WORD_CONTAINED(CONFLICT, "USER_409_2", "금지어가 포함되어 있습니다."),
