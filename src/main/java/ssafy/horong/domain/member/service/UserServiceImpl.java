@@ -236,7 +236,7 @@ public class UserServiceImpl implements UserService {
         return response;
     }
 
-
+    @Transactional
     public UserProfileDetailResponse updateProfileImage(Integer profileImageNumber) {
         log.info("[UserService] 프로필 이미지 변경");
         User user = getCurrentLoggedInMember();

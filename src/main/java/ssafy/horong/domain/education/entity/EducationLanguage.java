@@ -24,7 +24,7 @@ public class EducationLanguage {
     @Column(nullable = false)
     private Language language; // 언어 (KOREAN, ENGLISH, CHINESE, JAPANESE)
 
-    @Column(length = 20, nullable = false)
+    @Column(length = 50, nullable = false)
     private String transWord; // 번역된 단어
 
     @Column(length = 100, nullable = false)
