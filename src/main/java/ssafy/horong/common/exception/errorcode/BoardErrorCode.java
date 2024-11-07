@@ -13,6 +13,7 @@ public enum BoardErrorCode implements BaseErrorCode {
 
     POST_NOT_FOUND(404, "BOARD_404_1", "게시글을 찾을 수 없습니다."),
     POST_DELETED(404, "BOARD_404_2", "삭제된 게시글입니다."),
+    COMMENT_NOT_FOUND(404, "BOARD_404_3", "댓글을 찾을 수 없습니다."),
 
     NOT_ADMIN(403, "BOARD_403_1", "관리자만 접근 가능합니다.");
 
