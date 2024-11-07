@@ -125,6 +125,8 @@ public class EducationServiceImpl implements EducationService {
         log.info("byteResponse: {}", response);
 
         educationRecord.setCer(response.cer());
+        educationRecord.setGtIdx(response.gtIdx());
+        educationRecord.setHypIdx(response.hypIdx());
         educationRecordRepository.save(educationRecord);
 
         EducationDay educationDay = educationDayRepository.findByUserId(userId).orElseThrow(null);
