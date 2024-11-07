@@ -1,13 +1,12 @@
 package ssafy.horong.domain.member.service;
 
-import ssafy.horong.api.member.response.UserDetailResponse;
-import ssafy.horong.api.member.response.UserIdResponse;
-import ssafy.horong.api.member.response.UserProfileDetailResponse;
-import ssafy.horong.api.member.response.UserSignupResponse;
+import ssafy.horong.api.member.response.*;
 import ssafy.horong.domain.member.command.MemberSignupCommand;
 import ssafy.horong.domain.member.command.PasswordUpdateCommand;
 import ssafy.horong.domain.member.command.UpdateProfileCommand;
 import ssafy.horong.domain.member.common.Language;
+
+import java.util.List;
 
 public interface UserService {
     UserSignupResponse signupMember(MemberSignupCommand signupCommand);
@@ -20,5 +19,6 @@ public interface UserService {
     void updateMemberPassword(PasswordUpdateCommand command);
     UserIdResponse getMemberId();
     void updateLanguage(Language language);
-
+    List<ProfileUnlockedResponse> getProfileUnlocked();
+    UserProfileDetailResponse updateProfileImage(Integer profileImage);
 }
