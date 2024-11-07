@@ -18,14 +18,8 @@ import ssafy.horong.common.properties.WebClientProperties;
 import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.education.command.SaveEduciatonRecordCommand;
-import ssafy.horong.domain.education.entity.Education;
-import ssafy.horong.domain.education.entity.EducationDay;
-import ssafy.horong.domain.education.entity.EducationLanguage;
-import ssafy.horong.domain.education.entity.EducationRecord;
-import ssafy.horong.domain.education.repository.EducationDayRepository;
-import ssafy.horong.domain.education.repository.EducationLanguageRepository;
-import ssafy.horong.domain.education.repository.EducationRecordRepository;
-import ssafy.horong.domain.education.repository.EducationRepository;
+import ssafy.horong.domain.education.entity.*;
+import ssafy.horong.domain.education.repository.*;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 import java.nio.charset.StandardCharsets;
@@ -47,6 +41,7 @@ public class EducationServiceImpl implements EducationService {
     private final WebClient webClient;
     private final WebClientProperties webClientProperties;
     private final EducationDayRepository educationDayRepository;
+    private final EducationStampRepository educationStampRepository;
 
     public TodayWordsResponse getTodayWords() {
         List<Education> todayWords = educationRepository.findByPublishDate(LocalDate.now());
@@ -127,6 +122,23 @@ public class EducationServiceImpl implements EducationService {
             educationDay.getWordIds().add(education.getId().intValue());
         }
 
+        // 5개의 단어를 학습했는지 확인
+        if (educationDay.getWordIds().size() >= 5) {
+            LocalDate today = LocalDate.now();
+
+            // 오늘 날짜로 스탬프가 이미 존재하는지 확인
+            boolean stampExists = educationStampRepository.existsByUserIdAndDay(userId, today);
+            if (!stampExists) {
+                // 스탬프가 없다면 새로 생성
+                EducationStamp educationStamp = EducationStamp.builder()
+                        .user(getCurrentUser())
+                        .day(today)
+                        .build();
+
+                educationStampRepository.save(educationStamp);
+            }
+        }
+
         educationDayRepository.save(educationDay);
 
         return new EducationRecordResponse(
@@ -140,15 +152,6 @@ public class EducationServiceImpl implements EducationService {
         );
     }
 
-    // byte[] 데이터를 SaveEducationResponseFromData로 변환하는 메서드
-    private SaveEducationResponseFromData convertToSaveEducationResponseFromData(byte[] byteResponse) {
-        try {
-            String jsonString = new String(byteResponse, StandardCharsets.UTF_8); // byte[]를 문자열로 변환
-            return new ObjectMapper().readValue(jsonString, SaveEducationResponseFromData.class); // JSON 파싱
-        } catch (Exception e) {
-            throw new RuntimeException("데이터 변환 실패", e);
-        }
-    }
     private User getCurrentUser() {
         Long userId = SecurityUtil.getLoginMemberId()
                 .orElseThrow(() -> new RuntimeException("로그인한 사용자가 존재하지 않습니다."));

@@ -28,4 +28,5 @@ public interface CommunityService {
     List<GetAllMessageListResponse> getAllMessageList();
     String saveImageToS3(MultipartFile file);
     Map<BoardType, List<GetPostResponse>> getMainPostList();
+    GetPostResponse getOriginalPost(Long id);
 }
