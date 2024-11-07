@@ -3,10 +3,7 @@ package ssafy.horong.domain.community.service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
-import ssafy.horong.api.community.response.GetAllMessageListResponse;
-import ssafy.horong.api.community.response.GetCommentResponse;
-import ssafy.horong.api.community.response.GetMessageListResponse;
-import ssafy.horong.api.community.response.GetPostResponse;
+import ssafy.horong.api.community.response.*;
 import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.entity.BoardType;
 import ssafy.horong.domain.community.entity.Notification;
@@ -29,6 +26,6 @@ public interface CommunityService {
     List<GetAllMessageListResponse> getAllMessageList();
     String saveImageToS3(MultipartFile file);
     Map<BoardType, List<GetPostResponse>> getMainPostList();
-    GetPostResponse getOriginalPost(Long id);
+    GetOriginPostResponse getOriginalPost(Long id);
     GetCommentResponse getOriginalComment(Long commentId);
 }

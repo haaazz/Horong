@@ -15,10 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.api.CommonResponse;
 import ssafy.horong.api.community.request.*;
-import ssafy.horong.api.community.response.GetAllMessageListResponse;
-import ssafy.horong.api.community.response.GetCommentResponse;
-import ssafy.horong.api.community.response.GetMessageListResponse;
-import ssafy.horong.api.community.response.GetPostResponse;
+import ssafy.horong.api.community.response.*;
 import ssafy.horong.api.health.TestRequest;
 import ssafy.horong.domain.community.entity.BoardType;
 import ssafy.horong.domain.community.service.CommunityService;
@@ -171,9 +168,9 @@ public class CommunityController {
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 원본 조회", description = "게시글의 원본을 조회하는 API입니다.")
     @GetMapping("/original/post/{postId}")
-    public CommonResponse<GetPostResponse> getOriginalPost(@PathVariable Long postId) {
+    public CommonResponse<GetOriginPostResponse> getOriginalPost(@PathVariable Long postId) {
         log.info("[CommunityController] 게시글 원본 조회 >>>> postId: {}", postId);
-        GetPostResponse response = communityService.getOriginalPost(postId);
+        GetOriginPostResponse response = communityService.getOriginalPost(postId);
         return CommonResponse.ok(response);
     }
 
