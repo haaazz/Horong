@@ -16,10 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.jsoup.Jsoup;
 import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.api.community.request.CreateContentByLanguageRequest;
-import ssafy.horong.api.community.response.GetAllMessageListResponse;
-import ssafy.horong.api.community.response.GetCommentResponse;
-import ssafy.horong.api.community.response.GetMessageListResponse;
-import ssafy.horong.api.community.response.GetPostResponse;
+import ssafy.horong.api.community.response.*;
 import ssafy.horong.common.exception.Board.*;
 import ssafy.horong.common.util.NotificationUtil; // NotificationUtil 추가
 import ssafy.horong.common.util.S3Util;
@@ -39,6 +36,9 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static ssafy.horong.domain.community.entity.ContentByLanguage.ContentType.CONTENT;
+import static ssafy.horong.domain.community.entity.ContentByLanguage.ContentType.TITLE;
 
 @Slf4j
 @Service
@@ -88,22 +88,26 @@ public class CommunityServiceImpl implements CommunityService {
                             .content(c.title()) // 제목
                             .isOriginal(c.isOriginal())
                             .language(Optional.ofNullable(c.language()).orElse(null))
-                            .contentType(ContentByLanguage.ContentType.TITLE)
+                            .contentType(TITLE)
                             .build();
                     titleEntity.setPost(post); // Post 설정
 
                     // 내용 ContentByLanguage 생성
+                    List<ContentImage> clonedContentImages = contentImages.stream()
+                            .map(img -> ContentImage.builder().imageUrl(img.getImageUrl()).build())
+                            .toList();
+
                     ContentByLanguage contentEntity = ContentByLanguage.builder()
                             .content(c.content()) // 내용
                             .isOriginal(c.isOriginal())
                             .language(Optional.ofNullable(c.language()).orElse(null))
-                            .contentType(ContentByLanguage.ContentType.CONTENT)
-                            .contentImages(contentImages) // 이미지 포함
+                            .contentType(CONTENT)
+                            .contentImages(clonedContentImages) // 복제된 이미지 리스트 추가
                             .build();
                     contentEntity.setPost(post); // Post 설정
 
                     // ContentImage와 ContentByLanguage 관계 설정
-                    contentImages.forEach(contentImage -> contentImage.setContent(contentEntity));
+                    clonedContentImages.forEach(contentImage -> contentImage.setContent(contentEntity));
 
                     // 제목과 내용을 모두 포함하는 스트림 반환
                     return Stream.of(titleEntity, contentEntity);
@@ -133,7 +137,7 @@ public class CommunityServiceImpl implements CommunityService {
                                 ContentByLanguage newContent = ContentByLanguage.builder()
                                         .post(post)
                                         .language(c.language())
-                                        .contentType(ContentByLanguage.ContentType.CONTENT)
+                                        .contentType(CONTENT)
                                         .build();
                                 post.getContentByCountries().add(newContent);
                                 return newContent;
@@ -432,13 +436,13 @@ public class CommunityServiceImpl implements CommunityService {
 
         Language language = getCurrentUser().getLanguage();
         String content = post.getContentByCountries().stream()
-                .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.CONTENT)
+                .filter(c -> c.getLanguage() == language && c.getContentType() == CONTENT)
                 .findFirst()
                 .map(ContentByLanguage::getContent)
                 .orElseThrow(PostNotFoundException::new);
 
         String title = post.getContentByCountries().stream()
-                .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.TITLE)
+                .filter(c -> c.getLanguage() == language && c.getContentType() == TITLE)
                 .findFirst()
                 .map(ContentByLanguage::getContent)
                 .orElseThrow(PostNotFoundException::new);
@@ -476,13 +480,13 @@ public class CommunityServiceImpl implements CommunityService {
                 .filter(post -> post.getDeletedAt() == null)
                 .map(post -> {
                     String content = post.getContentByCountries().stream()
-                            .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.CONTENT)
+                            .filter(c -> c.getLanguage() == language && c.getContentType() == CONTENT)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
                             .orElseThrow(PostNotFoundException::new);
 
                     String title = post.getContentByCountries().stream()
-                            .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.TITLE)
+                            .filter(c -> c.getLanguage() == language && c.getContentType() == TITLE)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
                             .orElseThrow(PostNotFoundException::new);
@@ -579,7 +583,7 @@ public class CommunityServiceImpl implements CommunityService {
         return mainPostList;
     }
 
-    public GetPostResponse getOriginalPost(Long id) {
+    public GetOriginPostResponse getOriginalPost(Long id) {
         log.info("원본 게시글 조회: {}", id);
         Post post = getPost(id);
 
@@ -587,14 +591,16 @@ public class CommunityServiceImpl implements CommunityService {
             throw new PostDeletedException();
         }
 
-        String content = post.getContentByCountries().stream()
-                .filter(c ->c.isOriginal()) // isOriginal 체크 추가
+        ContentByLanguage originalContent = post.getContentByCountries().stream()
+                .filter(c -> c.isOriginal() && c.getContentType() == ContentByLanguage.ContentType.CONTENT) // isOriginal 체크 추가
                 .findFirst()
-                .map(ContentByLanguage::getContent)
                 .orElseThrow(PostNotFoundException::new);
 
+        // content와 title 텍스트 추출
+        String content = originalContent.getContent();
+
         String title = post.getContentByCountries().stream()
-                .filter(c ->c.isOriginal()) // isOriginal 체크 추가
+                .filter(c -> c.isOriginal() && c.getContentType() == ContentByLanguage.ContentType.TITLE) // isOriginal 체크 추가
                 .findFirst()
                 .map(ContentByLanguage::getContent)
                 .orElseThrow(PostNotFoundException::new);
@@ -605,7 +611,7 @@ public class CommunityServiceImpl implements CommunityService {
                         .toList()
         );
 
-        return new GetPostResponse(
+        return new GetOriginPostResponse(new GetPostResponse(
                 post.getId(),
                 title,
                 post.getAuthor().getNickname(),
@@ -613,7 +619,8 @@ public class CommunityServiceImpl implements CommunityService {
                 content,
                 post.getCreatedAt().toString(),
                 commentResponses
-        );
+        ),
+                contentImageRepository.findImageUrlsByContent(originalContent));
     }
 
     public GetCommentResponse getOriginalComment(Long commentId) {
@@ -655,7 +662,7 @@ public class CommunityServiceImpl implements CommunityService {
                 .map(post -> {
                     // 언어별 콘텐츠 필터링
                     String content = post.getContentByCountries().stream()
-                            .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.CONTENT)
+                            .filter(c -> c.getLanguage() == language && c.getContentType() == CONTENT)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
                             .orElseThrow(() -> {
@@ -664,7 +671,7 @@ public class CommunityServiceImpl implements CommunityService {
                             });
 
                     String title = post.getContentByCountries().stream()
-                            .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.TITLE)
+                            .filter(c -> c.getLanguage() == language && c.getContentType() == TITLE)
                             .findFirst()
                             .map(ContentByLanguage::getContent)
                             .orElseThrow(() -> {
