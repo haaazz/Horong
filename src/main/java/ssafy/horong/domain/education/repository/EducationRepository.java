@@ -7,6 +7,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface EducationRepository extends JpaRepository<Education, Long> {
-    List<Education> findByPublishDate(LocalDate publishDate);
+    List<Education> findByDay(int day);
     Education findByWord(String word);
 }

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import ssafy.horong.domain.member.entity.User;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "EducationStamp")
@@ -23,13 +24,10 @@ public class EducationStamp {
     private User user;
 
     @Column(nullable = false)
-    private LocalDate day;
-
-    @Column(nullable = false)
-    private LocalDate date;
+    private LocalDateTime createdAt;
 
     @PrePersist
     public void prePersist() {
-        this.date = LocalDate.now();
+        this.createdAt = LocalDateTime.now();
     }
 }

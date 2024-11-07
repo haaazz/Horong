@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import ssafy.horong.domain.member.entity.User;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -31,5 +32,8 @@ public class EducationDay {
     private List<Integer> wordIds;
 
     @Column(name = "day")
-    private Integer day;
+    private int day;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 }

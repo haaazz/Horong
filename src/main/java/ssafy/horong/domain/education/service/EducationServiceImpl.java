@@ -1,12 +1,10 @@
 package ssafy.horong.domain.education.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.UnsupportedMediaTypeException;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import ssafy.horong.api.education.response.EducationRecordResponse;
@@ -22,10 +20,10 @@ import ssafy.horong.domain.education.entity.*;
 import ssafy.horong.domain.education.repository.*;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
-import java.nio.charset.StandardCharsets;
 
 import java.net.URI;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Slf4j
@@ -44,8 +42,18 @@ public class EducationServiceImpl implements EducationService {
     private final EducationStampRepository educationStampRepository;
 
     public TodayWordsResponse getTodayWords() {
-        List<Education> todayWords = educationRepository.findByPublishDate(LocalDate.now());
-        User user = userRepository.findByUserId(SecurityUtil.getLoginMemberId().toString()).orElseThrow(() -> new RuntimeException("User not found"));
+        LocalDateTime today = LocalDateTime.now();
+        Integer educationDay = educationDayRepository.findTopByUserAndCreatedAtNotTodayOrderByDayDesc(
+                getCurrentUser(),
+                today
+        ).orElse(1);  // 값이 없을 경우 기본값 1 반환
+
+        log.info("오늘의 단어: {}", educationDay);
+
+        List<Education> todayWords = educationRepository.findByDay(educationDay);
+        log.info("오늘의 단어: {}", todayWords);
+        log.info("단어 전부: {}", educationRepository.findAll());
+        User user = getCurrentUser();
         List<EducationLanguage> translatedWords = educationLanguageRepository.findByEducationIdAndLanguage(todayWords.get(0).getId(), user.getLanguage());
         return new TodayWordsResponse(todayWords, translatedWords);
     }
@@ -78,9 +86,13 @@ public class EducationServiceImpl implements EducationService {
     @Transactional
     public EducationRecordResponse saveEducationRecord(SaveEduciatonRecordCommand command) {
         Education education = educationRepository.findByWord(command.word());
+        List<Education> findAll = educationRepository.findAll();
+        log.info("교육 목록: {}", findAll);
+        log.info("education: {}", education);
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
         UUID recordIndex = UUID.randomUUID();
         String location = s3Util.uploadToS3(command.audio(), command.word() + "/" + userId + "/" + recordIndex, "education/");
+        log.info("word_id", education.getId());
         EducationRecord educationRecord = EducationRecord.builder()
                 .education(education)
                 .audio(location)
@@ -88,7 +100,7 @@ public class EducationServiceImpl implements EducationService {
                 .cer(0) // 임시 값
                 .build();
 
-        String requestUrl = webClientProperties.url() + "/word";
+        String requestUrl = webClientProperties.url() + "/education";
 
         log.info("s3 주소 {}", s3Util.getS3UrlFromS3(location));
 
@@ -127,12 +139,11 @@ public class EducationServiceImpl implements EducationService {
             LocalDate today = LocalDate.now();
 
             // 오늘 날짜로 스탬프가 이미 존재하는지 확인
-            boolean stampExists = educationStampRepository.existsByUserIdAndDay(userId, today);
+            boolean stampExists = educationStampRepository.existsByUserIdAndCreatedAtDateOnly(userId, today);
             if (!stampExists) {
                 // 스탬프가 없다면 새로 생성
                 EducationStamp educationStamp = EducationStamp.builder()
                         .user(getCurrentUser())
-                        .day(today)
                         .build();
 
                 educationStampRepository.save(educationStamp);

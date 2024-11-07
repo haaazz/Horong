@@ -8,7 +8,7 @@ import java.util.Date;
 import java.util.List;
 
 @Entity
-@Table(name = "word")
+@Table(name = "educaion")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -42,8 +42,6 @@ public class Education {
 
     @Column(nullable = false)
     private int day;
-
-    private LocalDate publishDate;
 
     @OneToMany(mappedBy = "education", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EducationLanguage> educationLanguages;
