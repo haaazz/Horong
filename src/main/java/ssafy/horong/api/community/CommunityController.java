@@ -166,4 +166,12 @@ public class CommunityController {
         Map<BoardType, List<GetPostResponse>> response = communityService.getMainPostList();
         return CommonResponse.ok(response);
     }
+
+    @Operation(summary = "게시글 원본 조회", description = "게시글의 원본을 조회하는 API입니다.")
+    @GetMapping("/original/{postId}")
+    public CommonResponse<GetPostResponse> getOriginalPost(@PathVariable Long postId) {
+        log.info("[CommunityController] 게시글 원본 조회 >>>> postId: {}", postId);
+        GetPostResponse response = communityService.getOriginalPost(postId);
+        return CommonResponse.ok(response);
+    }
 }

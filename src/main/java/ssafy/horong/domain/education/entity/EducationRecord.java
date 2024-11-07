@@ -3,6 +3,7 @@ package ssafy.horong.domain.education.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import ssafy.horong.common.util.ListToStringConverter;
+import ssafy.horong.domain.member.entity.User;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -19,8 +20,9 @@ public class EducationRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long userId;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @ManyToOne
     @JoinColumn(name = "wordId", nullable = false)

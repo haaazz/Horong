@@ -115,6 +115,7 @@ public class CommunityServiceImpl implements CommunityService {
         postRepository.save(post); // Post 저장
 
         savePostDocument(post, command.content()); // Elasticsearch에 PostDocument 저장
+        log.info("사용자 {}의 게시글 생성: {}", getCurrentUser().getId(), post.getId());
     }
 
     @Transactional
@@ -576,6 +577,43 @@ public class CommunityServiceImpl implements CommunityService {
         mainPostList.put(BoardType.GYEONGGI, getPostsByBoardType(BoardType.GYEONGGI, 1));
 
         return mainPostList;
+    }
+
+    public GetPostResponse getOriginalPost(Long id) {
+        log.info("원본 게시글 조회: {}", id);
+        Post post = getPost(id);
+
+        if (post.getDeletedAt() != null) {
+            throw new PostDeletedException();
+        }
+
+        String content = post.getContentByCountries().stream()
+                .filter(c ->c.isOriginal()) // isOriginal 체크 추가
+                .findFirst()
+                .map(ContentByLanguage::getContent)
+                .orElseThrow(PostNotFoundException::new);
+
+        String title = post.getContentByCountries().stream()
+                .filter(c ->c.isOriginal()) // isOriginal 체크 추가
+                .findFirst()
+                .map(ContentByLanguage::getContent)
+                .orElseThrow(PostNotFoundException::new);
+
+        List<GetCommentResponse> commentResponses = convertToCommentResponse(
+                post.getComments().stream()
+                        .sorted(Comparator.comparing(Comment::getCreatedAt).reversed())
+                        .toList()
+        );
+
+        return new GetPostResponse(
+                post.getId(),
+                title,
+                post.getAuthor().getNickname(),
+                post.getAuthor().getId(),
+                content,
+                post.getCreatedAt().toString(),
+                commentResponses
+        );
     }
 
     private List<GetPostResponse> getPostsByBoardType(BoardType boardType, int limit) {

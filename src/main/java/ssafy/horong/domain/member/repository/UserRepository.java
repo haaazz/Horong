@@ -15,6 +15,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUserId(String UserId);
 
     @Query("""
+        SELECT p
+        FROM User p
+        WHERE p.userId = :userId
+    """)
+    User findByUserIdCustom(Long userId);
+
+    @Query("""
         SELECT COUNT(p) > 0
         FROM User p
         WHERE p.nickname = :nickname AND p.isDeleted = false

@@ -5,7 +5,7 @@ import ssafy.horong.domain.education.entity.Education;
 import java.util.List;
 
 public record SaveEducationResponseFromData(
-        Education education,
+        String text,
         float cer,
         List<Integer> gtIdx,
         List<Integer> hypIdx
