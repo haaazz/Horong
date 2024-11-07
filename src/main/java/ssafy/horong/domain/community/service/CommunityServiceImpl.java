@@ -115,6 +115,7 @@ public class CommunityServiceImpl implements CommunityService {
         postRepository.save(post); // Post 저장
 
         savePostDocument(post, command.content()); // Elasticsearch에 PostDocument 저장
+        log.info("사용자 {}의 게시글 생성: {}", getCurrentUser().getId(), post.getId());
     }
 
     @Transactional

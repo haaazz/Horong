@@ -2,6 +2,7 @@ package ssafy.horong.api.health;
 
 import java.io.BufferedReader;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -14,22 +15,27 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.UnsupportedMediaTypeException;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import ssafy.horong.api.CommonResponse;
+import ssafy.horong.api.education.response.SaveEducationResponseFromData;
 import ssafy.horong.common.exception.data.DataNotFoundException;
 import ssafy.horong.common.exception.errorcode.GlobalErrorCode;
 import ssafy.horong.common.properties.WebClientProperties;
 import ssafy.horong.common.util.S3Util;
+import ssafy.horong.common.util.SecurityUtil;
+import ssafy.horong.config.SecurityConfig;
+import ssafy.horong.domain.member.entity.User;
+import ssafy.horong.domain.member.repository.UserRepository;
 
 import javax.sql.DataSource;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 @Slf4j
 @RestController
@@ -44,6 +50,8 @@ public class HealthController {
     private final WebClient webClient;
     private final WebClientProperties webClientProperties;
     private final RedisTemplate<String, String> redisTemplateslang;
+    private final UserRepository userRepository;
+    private final SecurityConfig securityConfig;
 
     @Operation(summary = "Redis 연결 확인", description = "Redis 서버와의 연결 상태를 확인합니다.")
     @GetMapping("/redis/check")
@@ -77,15 +85,15 @@ public class HealthController {
     }
 
     @Operation(summary = "이미지 전송 확인", description = "이미지 전송이 정상적으로 동작하는지 확인합니다.")
-    @PostMapping(value = "/image", consumes = { "multipart/form-data" })
+    @PostMapping(value = "/image", consumes = {"multipart/form-data"})
     public CommonResponse<URI> checkImageTransfer(@ModelAttribute @Validated TestRequest request) {
 
         log.info("health{}", request.image());
-        String imageUrl= s3Util.uploadToS3(request.image(), "test", "test/");
+        String imageUrl = s3Util.uploadToS3(request.image(), "test", "test/");
         return CommonResponse.ok(s3Util.getS3UrlFromS3(imageUrl));
     }
 
-    @PostMapping(value = "/audio", consumes = { "multipart/form-data" })
+    @PostMapping(value = "/audio", consumes = {"multipart/form-data"})
     public CommonResponse<URI> uploadAudio(@ModelAttribute @Validated mp3TestRequest request) {
 
         MultipartFile audioFile = request.mp3(); // 파일을 가져옴
@@ -110,7 +118,7 @@ public class HealthController {
     public CommonResponse<String> checkDataServerConnection() {
         log.info("[HealthController] 데이터 서버 연결 확인");
 
-        String requestUrl = webClientProperties.url() + "education" + "/";
+        String requestUrl = webClientProperties.url() + "word" + "/";
 
         String response = webClient.get()
                 .uri(requestUrl)
@@ -185,4 +193,58 @@ public class HealthController {
                     .body(CommonResponse.internalServerError(GlobalErrorCode.SERVER_ERROR));
         }
     }
+
+    @Operation(summary = "교육 데이파트 연결 테스트", description = "교육 데이터 서버와의 연결 상태를 확인합니다.")
+    @GetMapping("/education-server/check")
+    public CommonResponse<SaveEducationResponseFromData> checkEducationServerConnection() {
+        log.info("[HealthController] 교육 데이터 서버 연결 확인");
+
+        String requestUrl = webClientProperties.url() + "word";
+
+        // WebClient 호출
+        SaveEducationResponseFromData byteResponse = webClient.post()
+                .uri(requestUrl)
+                .body(BodyInserters.fromValue(Map.of(
+                        "word", "테스트",
+                        "s3_url", "https://horong-service.s3.ap-northeast-2.amazonaws.com/education/standard/테스트.mp3"
+                )))
+                .retrieve()
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                .doOnNext(errorBody -> log.error("Error response body: {}", errorBody)) // 에러 내용 로그 출력
+                                .flatMap(errorBody -> Mono.error(new DataNotFoundException())) // errorBody를 사용해 예외 생성
+                )
+                .bodyToMono(SaveEducationResponseFromData.class)
+                .blockOptional()
+                .orElseThrow(DataNotFoundException::new);
+
+        return CommonResponse.ok(byteResponse);
+    }
+
+    public class ByteResponseParser {
+        public static Map<String, Object> parseByteResponseToJson(byte[] byteResponse) {
+            try {
+                // byte[] 데이터를 String으로 변환
+                String jsonString = new String(byteResponse, StandardCharsets.UTF_8);
+
+                // JSON 파서 객체 생성
+                ObjectMapper objectMapper = new ObjectMapper();
+
+                // JSON 문자열을 Map 형태로 변환
+                return objectMapper.readValue(jsonString, Map.class);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException("JSON 파싱 오류");
+            }
+        }
+    }
+
+    @Operation(summary = "유저 확인", description = "유저를 확인합니다.")
+    @GetMapping("/user")
+    public CommonResponse<String> checkUser() {
+        log.info("[HealthController] 유저 확인{}", userRepository.findByUserIdCustom(SecurityUtil.getLoginMemberId().orElseThrow(null)));
+        return CommonResponse.ok("유저 확인 성공", null);
+    }
 }
+

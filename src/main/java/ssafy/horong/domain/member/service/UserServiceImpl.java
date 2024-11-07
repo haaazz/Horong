@@ -21,6 +21,8 @@ import ssafy.horong.common.exception.token.TokenSaveFailedException;
 import ssafy.horong.common.util.JwtProcessor;
 import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
+import ssafy.horong.domain.education.entity.EducationDay;
+import ssafy.horong.domain.education.repository.EducationDayRepository;
 import ssafy.horong.domain.member.command.MemberSignupCommand;
 import ssafy.horong.domain.member.command.PasswordUpdateCommand;
 import ssafy.horong.domain.member.command.UpdateProfileCommand;
@@ -32,6 +34,7 @@ import ssafy.horong.domain.member.repository.UserRepository;
 import ssafy.horong.common.exception.User.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Set;
 
 @Slf4j
@@ -47,6 +50,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordHistoryRepository passwordHistoryRepository;
     private final RedisTemplate<String, String> redisTemplateslang;
     private static final String FORBIDDEN_WORDS_KEY = "forbiddenWords";
+    private final EducationDayRepository educationDayRepository;
 
     @Override
     @Transactional
@@ -91,6 +95,15 @@ public class UserServiceImpl implements UserService {
                 .build());
         long afterPasswordHistory = System.currentTimeMillis();
         log.info("[Timing] 비밀번호 히스토리 저장 소요 시간: {} ms", afterPasswordHistory - afterProfileImage);
+
+        //유저 학습 테이블 생성
+        EducationDay educationDay = EducationDay.builder()
+                .user(userToSave)
+                .wordIds(new ArrayList<>())
+                .day(1)
+                .build();
+
+        educationDayRepository.save(educationDay);
 
         // 6. 토큰 생성 및 저장
         try {
