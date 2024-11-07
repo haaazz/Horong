@@ -46,4 +46,11 @@ public class BoardExceptionHandler {
         log.error("PostDeletedException", e);
         return CommonResponse.notFound(e.getErrorCode());
     }
+
+    @ExceptionHandler(CommentNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public CommonResponse handleCommentNotFoundException(CommentNotFoundException e) {
+        log.error("CommentNotFoundException", e);
+        return CommonResponse.notFound(e.getErrorCode());
+    }
 }

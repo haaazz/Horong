@@ -616,6 +616,24 @@ public class CommunityServiceImpl implements CommunityService {
         );
     }
 
+    public GetCommentResponse getOriginalComment(Long commentId) {
+        Comment comment = getComment(commentId);
+
+        String content = comment.getContentByCountries().stream()
+                .filter(c -> c.isOriginal()) // isOriginal 체크 추가
+                .findFirst()
+                .map(ContentByLanguage::getContent)
+                .orElseThrow(CommentNotFoundException::new);
+
+        return new GetCommentResponse(
+                comment.getId(),
+                comment.getAuthor().getNickname(),
+                comment.getAuthor().getId(),
+                content,
+                comment.getCreatedAt().toString()
+        );
+    }
+
     private List<GetPostResponse> getPostsByBoardType(BoardType boardType, int limit) {
         log.info("특정 게시판 타입별 게시글 조회: {}", boardType);
 
@@ -734,8 +752,9 @@ public class CommunityServiceImpl implements CommunityService {
                                 null, // 삭제된 댓글의 ID
                                 "deleted", // 삭제된 닉네임
                                 null,
-                                null,
-                                "삭제된 댓글입니다." // 삭제된 댓글 내용
+                                "삭제된 댓글입니다.", // 삭제된 댓글 내용
+                                null
+
                         );
                     }
 
