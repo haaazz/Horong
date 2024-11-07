@@ -25,7 +25,7 @@ public class EducationRecord {
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "wordId", nullable = false)
+    @JoinColumn(name = "education_id", nullable = false)
     private Education education; // 교육 자료와 연관된 단어
 
     @Column(nullable = false)
