@@ -1,5 +1,6 @@
 package ssafy.horong.domain.community.service;
 
+import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.safety.Safelist;
@@ -7,7 +8,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.ResourceNotFoundException;
+import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.jsoup.Jsoup;
@@ -25,10 +28,7 @@ import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.elastic.PostDocument;
 import ssafy.horong.domain.community.entity.*;
 import ssafy.horong.api.community.request.ContentImageRequest;
-import ssafy.horong.domain.community.repository.BoardRepository;
-import ssafy.horong.domain.community.repository.CommentRepository;
-import ssafy.horong.domain.community.repository.MessageRepository;
-import ssafy.horong.domain.community.repository.NotificationRepository;
+import ssafy.horong.domain.community.repository.*;
 import ssafy.horong.domain.member.common.Language;
 import ssafy.horong.domain.member.common.MemberRole;
 import ssafy.horong.domain.member.entity.User;
@@ -55,6 +55,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final NotificationUtil notificationUtil; // NotificationUtil 추가
     private final S3Util s3Util;
     private final BoardRepository boardRepository;
+    private final ContentImageRepository contentImageRepository;
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -114,6 +115,7 @@ public class CommunityServiceImpl implements CommunityService {
         postRepository.save(post); // Post 저장
 
         savePostDocument(post, command.content()); // Elasticsearch에 PostDocument 저장
+        log.info("사용자 {}의 게시글 생성: {}", getCurrentUser().getId(), post.getId());
     }
 
     @Transactional
@@ -122,32 +124,55 @@ public class CommunityServiceImpl implements CommunityService {
         Post post = postRepository.findById(command.postId())
                 .orElseThrow(PostNotFoundException::new);
 
-        List<ContentImage> contentImages = command.contentImageRequest().stream()
-                .map(ContentImageRequest::imageUrl)
-                .map(imageUrl -> ContentImage.builder().imageUrl(imageUrl).build())
-                .toList();
-
-        List<ContentByLanguage> contentEntities = command.content().stream()
+        List<ContentByLanguage> updatedContentEntities = command.content().stream()
                 .map(c -> {
+                    ContentByLanguage existingContent = post.getContentByCountries().stream()
+                            .filter(content -> content.getLanguage() != null && content.getLanguage().equals(c.language()))
+                            .findFirst()
+                            .orElseGet(() -> {
+                                ContentByLanguage newContent = ContentByLanguage.builder()
+                                        .post(post)
+                                        .language(c.language())
+                                        .contentType(ContentByLanguage.ContentType.CONTENT)
+                                        .build();
+                                post.getContentByCountries().add(newContent);
+                                return newContent;
+                            });
 
-                    ContentByLanguage contentByLanguage = ContentByLanguage.builder()
-                            .content(c.content())
-                            .isOriginal(c.isOriginal())
-                            .language(Optional.ofNullable(c.language()).orElse(null))
-                            .contentType(ContentByLanguage.ContentType.CONTENT)
-                            .contentImages(contentImages)
-                            .post(post)
-                            .build();
+                    existingContent.setContent(c.content());
+                    existingContent.setOriginal(c.isOriginal());
 
-                    contentImages.forEach(contentImage -> contentImage.setContent(contentByLanguage));
-                    return contentByLanguage;
+                    // 기존 이미지를 삭제하고 새 이미지 추가하는 대신 리스트를 직접 수정
+                    List<ContentImage> existingImages = existingContent.getContentImages();
+                    List<String> newImageUrls = command.contentImageRequest().stream()
+                            .map(ContentImageRequest::imageUrl)
+                            .map(imageUrl -> imageUrl.substring(imageUrl.indexOf("community/")))
+                            .collect(Collectors.toList());
+
+                    // 새로운 URL에 해당하지 않는 기존 이미지를 제거
+                    existingImages.removeIf(image -> !newImageUrls.contains(image.getImageUrl()));
+
+                    // 기존에 없는 새로운 이미지만 추가
+                    for (String imageUrl : newImageUrls) {
+                        if (existingImages.stream().noneMatch(image -> image.getImageUrl().equals(imageUrl))) {
+                            ContentImage newImage = ContentImage.builder()
+                                    .imageUrl(imageUrl)
+                                    .content(existingContent)
+                                    .build();
+                            existingImages.add(newImage);
+                        }
+                    }
+
+                    return existingContent;
                 })
-                .toList();
+                .collect(Collectors.toList());
 
-        post.setContentByCountries(contentEntities); // Post에 ContentByLanguage 설정
-        postRepository.save(post); // Post 저장
-        postElasticsearchRepository.deleteById(String.valueOf(post.getId())); // Elasticsearch에서 기존 PostDocument 삭제
-        savePostDocument(post, command.content()); // Elasticsearch에 새로운 PostDocument 저장
+        post.setContentByCountries(updatedContentEntities);
+        postRepository.save(post);
+
+        // Elasticsearch에 업데이트
+        postElasticsearchRepository.deleteById(String.valueOf(post.getId()));
+        savePostDocument(post, command.content());
     }
 
     @Transactional
@@ -232,17 +257,32 @@ public class CommunityServiceImpl implements CommunityService {
         validateUserOrAdmin(comment.getAuthor());
 
         if (command.contentByCountries() != null && !command.contentByCountries().isEmpty()) {
-            comment.getContentByCountries().clear();
+            List<ContentByLanguage> existingContentByCountries = comment.getContentByCountries();
 
             command.contentByCountries().forEach(contentRequest -> {
-                ContentByLanguage content = ContentByLanguage.builder()
-                        .comment(comment)
-                        .language(Optional.ofNullable(contentRequest.language()).orElse(null))
-                        .content(contentRequest.content())
-                        .isOriginal(contentRequest.isOriginal())
-                        .build();
-                comment.getContentByCountries().add(content);
+                // 기존 ContentByLanguage 엔터티를 찾기
+                ContentByLanguage existingContent = existingContentByCountries.stream()
+                        .filter(content -> content.getLanguage() != null && content.getLanguage().equals(contentRequest.language()))
+                        .findFirst()
+                        .orElseGet(() -> {
+                            ContentByLanguage newContent = ContentByLanguage.builder()
+                                    .comment(comment)
+                                    .language(contentRequest.language())
+                                    .build();
+                            existingContentByCountries.add(newContent);
+                            return newContent;
+                        });
+
+                // 기존 엔터티의 필드 업데이트
+                existingContent.setContent(contentRequest.content());
+                existingContent.setOriginal(contentRequest.isOriginal());
             });
+
+            // 삭제할 항목 처리 (기존 리스트에 있지만 새 요청에 없는 항목)
+            existingContentByCountries.removeIf(existingContent ->
+                    existingContent.getLanguage() != null && command.contentByCountries().stream()
+                            .noneMatch(contentRequest -> contentRequest.language() != null && contentRequest.language().equals(existingContent.getLanguage()))
+            );
         }
 
         comment.setUpdatedAt(LocalDateTime.now());
@@ -255,7 +295,7 @@ public class CommunityServiceImpl implements CommunityService {
         List<ContentImage> contentImages = command.contentImageRequest().stream()
                 .map(ContentImageRequest::imageUrl)
                 .map(imageUrl -> {
-                    String trimmedUrl = imageUrl.substring(imageUrl.indexOf("community/"));
+                    String trimmedUrl = imageUrl.substring(imageUrl.indexOf("message/"));
                     return ContentImage.builder().imageUrl(trimmedUrl).build();
                 })
                 .toList();
@@ -325,7 +365,10 @@ public class CommunityServiceImpl implements CommunityService {
                             .filter(message -> !message.isRead()) // 읽지 않은 메시지만 필터링
                             .count();
 
-                    Message lastMessage = senderMessages.get(senderMessages.size() - 1);
+                    // 최신 메시지 기준으로 정렬
+                    senderMessages.sort(Comparator.comparing(Message::getCreatedAt).reversed());
+
+                    Message lastMessage = senderMessages.get(0);
                     String lastContent = lastMessage.getContentByCountries().stream()
                             .filter(c -> c.getLanguage() == getCurrentUser().getLanguage())
                             .findFirst()
@@ -335,7 +378,9 @@ public class CommunityServiceImpl implements CommunityService {
                     return new GetAllMessageListResponse(
                             unreadCount,
                             lastContent,
-                            sender.getNickname()
+                            sender.getNickname(),
+                            sender.getId(),
+                            lastMessage.getCreatedAt().toString()
                     );
                 })
                 .sorted(Comparator.comparing((GetAllMessageListResponse response) -> {
@@ -352,7 +397,11 @@ public class CommunityServiceImpl implements CommunityService {
     @Transactional
     @Override
     public List<GetMessageListResponse> getMessageList(GetMessageListCommand command) {
-        List<Message> messages = messageRepository.findBySenderIdAndreceiver(command.senderId(), getCurrentUser().getId());
+        // createdAt 내림차순으로 정렬
+        List<Message> messages = messageRepository.findMessagesBetweenUsers(
+                command.senderId(),
+                getCurrentUser().getId()
+        );
         Language userLanguage = getCurrentUser().getLanguage();
 
         return messages.stream()
@@ -366,8 +415,8 @@ public class CommunityServiceImpl implements CommunityService {
                     message.readMessage();
                     messageRepository.save(message);
 
-                    log.info("읽음여부 {}, {}" , message.isRead(), message.getId());
-                    return new GetMessageListResponse(content, message.getSender().getNickname());
+                    log.info("읽음여부 {}, {}", message.isRead(), message.getId());
+                    return new GetMessageListResponse(content, message.getSender().getNickname(), message.getSender().getId(), message.getCreatedAt().toString());
                 })
                 .toList();
     }
@@ -395,13 +444,14 @@ public class CommunityServiceImpl implements CommunityService {
                 .orElseThrow(PostNotFoundException::new);
 
         List<GetCommentResponse> commentResponses = convertToCommentResponse(
-                post.getComments().stream().toList()
+                post.getComments().stream().sorted(Comparator.comparing(Comment::getCreatedAt).reversed()).toList()
         );
 
         return new GetPostResponse(
                 post.getId(),
                 title,
                 post.getAuthor().getNickname(),
+                post.getAuthor().getId(),
                 content,
                 post.getCreatedAt().toString(),
                 commentResponses
@@ -412,7 +462,14 @@ public class CommunityServiceImpl implements CommunityService {
     public Page<GetPostResponse> getPostList(Pageable pageable, String boardType) {
         log.info("모든 게시글 조회 (페이지네이션)");
 
-        Page<Post> postPage = postRepository.findByType(BoardType.valueOf(boardType), pageable);
+        // createdAt 내림차순 정렬을 강제
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<Post> postPage = postRepository.findByType(BoardType.valueOf(boardType), sortedPageable);
         Language language = getCurrentUser().getLanguage();
 
         List<GetPostResponse> postResponses = postPage.getContent().stream()
@@ -423,7 +480,6 @@ public class CommunityServiceImpl implements CommunityService {
                             .findFirst()
                             .map(ContentByLanguage::getContent)
                             .orElseThrow(PostNotFoundException::new);
-                    log.info("post댓글확인 {}", post.getComments());
 
                     String title = post.getContentByCountries().stream()
                             .filter(c -> c.getLanguage() == language && c.getContentType() == ContentByLanguage.ContentType.TITLE)
@@ -432,13 +488,14 @@ public class CommunityServiceImpl implements CommunityService {
                             .orElseThrow(PostNotFoundException::new);
 
                     List<GetCommentResponse> commentResponses = convertToCommentResponse(
-                            post.getComments().stream().toList()
+                            post.getComments().stream().sorted(Comparator.comparing(Comment::getCreatedAt).reversed()).toList()
                     );
 
                     return new GetPostResponse(
                             post.getId(),
                             title,
                             post.getAuthor().getNickname(),
+                            post.getAuthor().getId(),
                             content,
                             post.getCreatedAt().toString(),
                             commentResponses
@@ -446,7 +503,7 @@ public class CommunityServiceImpl implements CommunityService {
                 })
                 .toList();
 
-        return new PageImpl<>(postResponses, pageable, postPage.getTotalElements());
+        return new PageImpl<>(postResponses, sortedPageable, postPage.getTotalElements());
     }
 
     @Override
@@ -465,7 +522,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         log.info("Elasticsearch 검색 결과: {}", uniqueDocuments);
 
-        // 검색 결과를 GetPostResponse로 변환
+        // 검색 결과를 GetPostResponse로 변환하고 createdAt 내림차순 정렬
         List<GetPostResponse> postResponses = uniqueDocuments.stream()
                 .map(postDocument -> {
                     // 사용자 언어에 따른 콘텐츠 선택
@@ -484,15 +541,21 @@ public class CommunityServiceImpl implements CommunityService {
                         default -> ""; // 언어가 유효하지 않으면 빈 문자열
                     };
 
+                    // 게시글 생성 시간을 기준으로 정렬하기 위해 실제 Post 엔티티에서 createdAt을 가져옵니다.
+                    Post post = boardRepository.findById(postDocument.getPostId()).orElse(null);
+                    String createdAt = post != null ? post.getCreatedAt().toString() : "";
+
                     return new GetPostResponse(
                             postDocument.getPostId(),
                             title,
                             postDocument.getAuthor(),
+                            userRepository.findByNicknameAndIsDeletedFalse(postDocument.getAuthor()).orElse(null).getId(),
                             content,
-                            boardRepository.findById(postDocument.getPostId()).orElse(null).getCreatedAt().toString(),
+                            createdAt,
                             List.of()
                     );
                 })
+                .sorted(Comparator.comparing(GetPostResponse::createdAt).reversed())
                 .toList();
 
         // 결과를 페이지 형태로 반환
@@ -516,13 +579,71 @@ public class CommunityServiceImpl implements CommunityService {
         return mainPostList;
     }
 
+    public GetPostResponse getOriginalPost(Long id) {
+        log.info("원본 게시글 조회: {}", id);
+        Post post = getPost(id);
+
+        if (post.getDeletedAt() != null) {
+            throw new PostDeletedException();
+        }
+
+        String content = post.getContentByCountries().stream()
+                .filter(c ->c.isOriginal()) // isOriginal 체크 추가
+                .findFirst()
+                .map(ContentByLanguage::getContent)
+                .orElseThrow(PostNotFoundException::new);
+
+        String title = post.getContentByCountries().stream()
+                .filter(c ->c.isOriginal()) // isOriginal 체크 추가
+                .findFirst()
+                .map(ContentByLanguage::getContent)
+                .orElseThrow(PostNotFoundException::new);
+
+        List<GetCommentResponse> commentResponses = convertToCommentResponse(
+                post.getComments().stream()
+                        .sorted(Comparator.comparing(Comment::getCreatedAt).reversed())
+                        .toList()
+        );
+
+        return new GetPostResponse(
+                post.getId(),
+                title,
+                post.getAuthor().getNickname(),
+                post.getAuthor().getId(),
+                content,
+                post.getCreatedAt().toString(),
+                commentResponses
+        );
+    }
+
+    public GetCommentResponse getOriginalComment(Long commentId) {
+        Comment comment = getComment(commentId);
+
+        String content = comment.getContentByCountries().stream()
+                .filter(c -> c.isOriginal()) // isOriginal 체크 추가
+                .findFirst()
+                .map(ContentByLanguage::getContent)
+                .orElseThrow(CommentNotFoundException::new);
+
+        return new GetCommentResponse(
+                comment.getId(),
+                comment.getAuthor().getNickname(),
+                comment.getAuthor().getId(),
+                content,
+                comment.getCreatedAt().toString()
+        );
+    }
+
     private List<GetPostResponse> getPostsByBoardType(BoardType boardType, int limit) {
         log.info("특정 게시판 타입별 게시글 조회: {}", boardType);
 
         // 현재 사용자의 언어 가져오기
         Language language = getCurrentUser().getLanguage();
 
-        List<Post> posts = postRepository.findByTypeOrderByCreatedAtDesc(boardType, PageRequest.of(0, limit));
+        // createdAt 내림차순 정렬을 적용한 페이징 요청
+        Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        List<Post> posts = postRepository.findByTypeOrderByCreatedAtDesc(boardType, pageable);
         log.info("{} 게시판에서 가져온 초기 게시글 개수: {}", boardType, posts.size());
 
         return posts.stream()
@@ -552,18 +673,20 @@ public class CommunityServiceImpl implements CommunityService {
                             });
 
                     List<GetCommentResponse> commentResponses = convertToCommentResponse(
-                            post.getComments().stream().toList()
+                            post.getComments().stream().sorted(Comparator.comparing(Comment::getCreatedAt).reversed()).toList()
                     );
 
                     return new GetPostResponse(
                             post.getId(),
                             title,
                             post.getAuthor().getNickname(),
+                            post.getAuthor().getId(),
                             content,
                             post.getCreatedAt().toString(),
                             commentResponses
                     );
                 })
+                .sorted(Comparator.comparing(GetPostResponse::createdAt).reversed()) // 최신순 정렬
                 .toList();
     }
 
@@ -621,6 +744,7 @@ public class CommunityServiceImpl implements CommunityService {
     private List<GetCommentResponse> convertToCommentResponse(List<Comment> comments) {
         log.info("댓글확인 {}", comments);
         return comments.stream()
+                .sorted(Comparator.comparing(Comment::getCreatedAt).reversed()) // 댓글을 최신순으로 정렬
                 .map(comment -> {
                     // 댓글이 삭제된 경우 처리
                     if (comment.getDeletedAt() != null) {
@@ -628,7 +752,9 @@ public class CommunityServiceImpl implements CommunityService {
                                 null, // 삭제된 댓글의 ID
                                 "deleted", // 삭제된 닉네임
                                 null,
-                                "삭제된 댓글입니다." // 삭제된 댓글 내용
+                                "삭제된 댓글입니다.", // 삭제된 댓글 내용
+                                null
+
                         );
                     }
 
@@ -641,6 +767,7 @@ public class CommunityServiceImpl implements CommunityService {
                     return new GetCommentResponse(
                             comment.getId(),
                             comment.getAuthor().getNickname(),
+                            comment.getAuthor().getId(),
                             content,
                             comment.getCreatedAt().toString()
                     );
@@ -652,6 +779,7 @@ public class CommunityServiceImpl implements CommunityService {
         PostDocument postDocument = PostDocument.builder()
                 .postId(post.getId())
                 .author(post.getAuthor().getNickname())
+                .authorId(post.getAuthor().getId())
                 .build();
 
         contentByCountries.forEach(contentByLanguage -> {

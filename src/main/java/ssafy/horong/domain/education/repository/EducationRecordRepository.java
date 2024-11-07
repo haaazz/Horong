@@ -12,7 +12,7 @@ public interface EducationRecordRepository extends JpaRepository<EducationRecord
     List<EducationRecord> findByEducationIdAndUserId(Long educationId, Long userId);
     List<EducationRecord> findByUserId(Long userId);
 
-//    @Query("SELECT MAX(er.recordIndex) FROM EducationRecord er WHERE er.education.id = :educationId AND er.userId = :userId")
+//    @Query("SELECT MAX(er.recordIndex) FROM EducationRecord er WHERE er.word.id = :educationId AND er.userId = :userId")
 //    Optional<Integer> findMaxRecordIndexByEducationIdAndUserId(@Param("educationId") Long educationId, @Param("userId") Long userId);
 }
 

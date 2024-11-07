@@ -16,7 +16,7 @@ import ssafy.horong.domain.education.service.EducationService;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/education")
-@Tag(name = "education", description = "한국어학습")
+@Tag(name = "word", description = "한국어학습")
 public class EducationController {
     private final EducationService educationService;
     @Operation(summary = "오늘의 단어", description = "오늘의 단어를 가져오는 API입니다.")

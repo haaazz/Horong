@@ -9,22 +9,21 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import ssafy.horong.api.education.response.EducationRecordResponse;
 import ssafy.horong.api.education.response.GetEducationRecordResponse;
+import ssafy.horong.api.education.response.SaveEducationResponseFromData;
 import ssafy.horong.api.education.response.TodayWordsResponse;
 import ssafy.horong.common.exception.data.DataNotFoundException;
 import ssafy.horong.common.properties.WebClientProperties;
 import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.education.command.SaveEduciatonRecordCommand;
-import ssafy.horong.domain.education.entity.Education;
-import ssafy.horong.domain.education.entity.EducationLanguage;
-import ssafy.horong.domain.education.entity.EducationRecord;
-import ssafy.horong.domain.education.repository.EducationLanguageRepository;
-import ssafy.horong.domain.education.repository.EducationRecordRepository;
-import ssafy.horong.domain.education.repository.EducationRepository;
+import ssafy.horong.domain.education.entity.*;
+import ssafy.horong.domain.education.repository.*;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 
+import java.net.URI;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Slf4j
@@ -39,93 +38,135 @@ public class EducationServiceImpl implements EducationService {
     private final S3Util s3Util;
     private final WebClient webClient;
     private final WebClientProperties webClientProperties;
+    private final EducationDayRepository educationDayRepository;
+    private final EducationStampRepository educationStampRepository;
 
     public TodayWordsResponse getTodayWords() {
-        List<Education> todayWords = educationRepository.findByPublishDate(LocalDate.now());
+        LocalDateTime today = LocalDateTime.now();
+        Integer educationDay = educationDayRepository.findTopByUserAndCreatedAtNotTodayOrderByDayDesc(
+                getCurrentUser(),
+                today
+        ).orElse(1);  // 값이 없을 경우 기본값 1 반환
 
-        User user = userRepository.findByUserId(SecurityUtil.getLoginMemberId().toString()).orElseThrow(() -> new RuntimeException("User not found"));
+        log.info("오늘의 단어: {}", educationDay);
 
+        List<Education> todayWords = educationRepository.findByDay(educationDay);
+        log.info("오늘의 단어: {}", todayWords);
+        log.info("단어 전부: {}", educationRepository.findAll());
+        User user = getCurrentUser();
         List<EducationLanguage> translatedWords = educationLanguageRepository.findByEducationIdAndLanguage(todayWords.get(0).getId(), user.getLanguage());
-
         return new TodayWordsResponse(todayWords, translatedWords);
     }
 
     public List<GetEducationRecordResponse> getAllEducationRecord() {
-        // 현재 로그인한 사용자 ID를 가져옵니다.
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
-
-        // 해당 사용자와 연관된 모든 교육 기록을 가져옵니다.
         List<EducationRecord> educationRecords = educationRecordRepository.findByUserId(userId);
-
-        // Education을 기준으로 EducationRecord를 그룹화합니다.
         Map<Education, List<EducationRecordResponse>> groupedRecords = new HashMap<>();
+
         for (EducationRecord record : educationRecords) {
             EducationRecordResponse recordResponse = new EducationRecordResponse(
                     record.getId(),
-                    record.getEducation(),
+                    record.getEducation().getWord(),
                     record.getCer(),
+                    record.getGtIdx(),
+                    record.getHypIdx(),
                     record.getDate(),
                     s3Util.getS3UrlFromS3(record.getAudio())
             );
-            groupedRecords
-                    .computeIfAbsent(record.getEducation(), k -> new ArrayList<>())
-                    .add(recordResponse);
+            groupedRecords.computeIfAbsent(record.getEducation(), k -> new ArrayList<>()).add(recordResponse);
         }
 
-        // 응답 리스트를 생성합니다.
         List<GetEducationRecordResponse> responseList = new ArrayList<>();
         for (Map.Entry<Education, List<EducationRecordResponse>> entry : groupedRecords.entrySet()) {
-            GetEducationRecordResponse response = new GetEducationRecordResponse(entry.getKey(), entry.getValue());
-            responseList.add(response);
+            responseList.add(new GetEducationRecordResponse(entry.getKey(), entry.getValue()));
         }
-
         return responseList;
     }
 
     @Transactional
-    public float saveEducationRecord(SaveEduciatonRecordCommand command) {
+    public EducationRecordResponse saveEducationRecord(SaveEduciatonRecordCommand command) {
         Education education = educationRepository.findByWord(command.word());
-//        Long educationId = education.getId();
+        List<Education> findAll = educationRepository.findAll();
+        log.info("교육 목록: {}", findAll);
+        log.info("education: {}", education);
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
-
-        // 마지막 recordIndex 값 조회 및 +1 증가하여 고유한 값 설정
-//        int recordIndex = educationRecordRepository.findMaxRecordIndexByEducationIdAndUserId(educationId, userId)
-//                .map(index -> index + 1)
-//                .orElse(0);
         UUID recordIndex = UUID.randomUUID();
-        // S3에 업로드
         String location = s3Util.uploadToS3(command.audio(), command.word() + "/" + userId + "/" + recordIndex, "education/");
-
-        // EducationRecord 저장
+        log.info("word_id", education.getId());
         EducationRecord educationRecord = EducationRecord.builder()
                 .education(education)
                 .audio(location)
+                .user(getCurrentUser())
                 .cer(0) // 임시 값
                 .build();
 
-        // 외부 서버 요청
-        String requestUrl = webClientProperties.url();
-        float score = webClient.post()
+        String requestUrl = webClientProperties.url() + "/education";
+
+        log.info("s3 주소 {}", s3Util.getS3UrlFromS3(location));
+
+        // WebClient 호출, application/octet-stream으로 수신
+        SaveEducationResponseFromData response = webClient.post()
                 .uri(requestUrl)
                 .body(BodyInserters.fromValue(Map.of(
-                        "url", s3Util.getS3UrlFromS3(location)
+                        "word", command.word(),
+                        "s3_url", s3Util.getS3UrlFromS3(location)
                 )))
                 .retrieve()
                 .onStatus(
                         status -> status.is4xxClientError() || status.is5xxServerError(),
                         clientResponse -> clientResponse.bodyToMono(String.class)
-                                .defaultIfEmpty("Unknown error")
-                                .flatMap(errorBody -> Mono.error(new DataNotFoundException()))
+                                .doOnNext(errorBody -> log.error("Error response body: {}", errorBody)) // 에러 내용 로그 출력
+                                .flatMap(errorBody -> Mono.error(new DataNotFoundException())) // errorBody를 사용해 예외 생성
                 )
-                .bodyToMono(float.class)
+                .bodyToMono(SaveEducationResponseFromData.class)
                 .blockOptional()
                 .orElseThrow(DataNotFoundException::new);
 
-        // CER 값 설정 후 저장
-        educationRecord.setCer(score);
+        log.info("byteResponse: {}", response);
+
+        educationRecord.setCer(response.cer());
         educationRecordRepository.save(educationRecord);
 
-        return score;
+        EducationDay educationDay = educationDayRepository.findByUserId(userId).orElseThrow(null);
+        educationDay.setDay(education.getDay());
+
+        if (!educationDay.getWordIds().contains(education.getId().intValue())) {
+            educationDay.getWordIds().add(education.getId().intValue());
+        }
+
+        // 5개의 단어를 학습했는지 확인
+        if (educationDay.getWordIds().size() >= 5) {
+            LocalDate today = LocalDate.now();
+
+            // 오늘 날짜로 스탬프가 이미 존재하는지 확인
+            boolean stampExists = educationStampRepository.existsByUserIdAndCreatedAtDateOnly(userId, today);
+            if (!stampExists) {
+                // 스탬프가 없다면 새로 생성
+                EducationStamp educationStamp = EducationStamp.builder()
+                        .user(getCurrentUser())
+                        .build();
+
+                educationStampRepository.save(educationStamp);
+            }
+        }
+
+        educationDayRepository.save(educationDay);
+
+        return new EducationRecordResponse(
+                educationRecord.getId(),
+                educationRecord.getEducation().getWord(),
+                educationRecord.getCer(),
+                educationRecord.getGtIdx(),
+                educationRecord.getHypIdx(),
+                educationRecord.getDate(),
+                URI.create(location)
+        );
     }
 
+    private User getCurrentUser() {
+        Long userId = SecurityUtil.getLoginMemberId()
+                .orElseThrow(() -> new RuntimeException("로그인한 사용자가 존재하지 않습니다."));
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자가 존재하지 않습니다."));
+    }
 }

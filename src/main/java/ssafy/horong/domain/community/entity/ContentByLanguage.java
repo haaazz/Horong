@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import ssafy.horong.domain.member.common.Language;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -41,8 +42,10 @@ public class ContentByLanguage {
 
     private boolean isOriginal;
 
-    @OneToMany(mappedBy = "content", cascade = CascadeType.ALL)  // Cascade 설정 추가
-    private List<ContentImage> contentImages;
+    // 기본적으로 변경 가능한 리스트로 초기화
+    @OneToMany(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ContentImage> contentImages = new ArrayList<>();
 
     public enum ContentType {
         TITLE, CONTENT

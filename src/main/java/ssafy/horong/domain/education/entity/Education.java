@@ -22,6 +22,9 @@ public class Education {
     @Column(length = 20, nullable = false)
     private String word;
 
+    @Column(length = 255, nullable = false)
+    private String pronunciation;
+
     @Column(length = 100, nullable = false)
     private String definition;
 
@@ -31,10 +34,14 @@ public class Education {
     @Column(length = 100, nullable = false)
     private String example2;
 
-    @Column(length = 255, nullable = false)
+    @Column(length = 255, nullable = true)
     private String audio; // S3 링크
 
-    private LocalDate publishDate;
+    @Column(nullable = false)
+    private boolean isSlang;
+
+    @Column(nullable = false)
+    private int day;
 
     @OneToMany(mappedBy = "education", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EducationLanguage> educationLanguages;

@@ -6,11 +6,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-import ssafy.horong.api.member.response.UserDetailResponse;
-import ssafy.horong.api.member.response.UserIdResponse;
-import ssafy.horong.api.member.response.UserProfileDetailResponse;
-import ssafy.horong.api.member.response.UserSignupResponse;
+import ssafy.horong.api.member.response.*;
 import ssafy.horong.common.constant.global.S3_IMAGE;
 import ssafy.horong.common.exception.User.UserIdDuplicateException;
 import ssafy.horong.common.exception.User.PasswordNotMatchException;
@@ -21,6 +17,9 @@ import ssafy.horong.common.exception.token.TokenSaveFailedException;
 import ssafy.horong.common.util.JwtProcessor;
 import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
+import ssafy.horong.domain.education.entity.EducationDay;
+import ssafy.horong.domain.education.repository.EducationDayRepository;
+import ssafy.horong.domain.education.repository.EducationStampRepository;
 import ssafy.horong.domain.member.command.MemberSignupCommand;
 import ssafy.horong.domain.member.command.PasswordUpdateCommand;
 import ssafy.horong.domain.member.command.UpdateProfileCommand;
@@ -31,7 +30,10 @@ import ssafy.horong.domain.member.repository.PasswordHistoryRepository;
 import ssafy.horong.domain.member.repository.UserRepository;
 import ssafy.horong.common.exception.User.*;
 
+import java.net.URL;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 @Slf4j
@@ -47,6 +49,8 @@ public class UserServiceImpl implements UserService {
     private final PasswordHistoryRepository passwordHistoryRepository;
     private final RedisTemplate<String, String> redisTemplateslang;
     private static final String FORBIDDEN_WORDS_KEY = "forbiddenWords";
+    private final EducationDayRepository educationDayRepository;
+    private final EducationStampRepository educationStampRepository;
 
     @Override
     @Transactional
@@ -91,6 +95,15 @@ public class UserServiceImpl implements UserService {
                 .build());
         long afterPasswordHistory = System.currentTimeMillis();
         log.info("[Timing] 비밀번호 히스토리 저장 소요 시간: {} ms", afterPasswordHistory - afterProfileImage);
+
+        //유저 학습 테이블 생성
+        EducationDay educationDay = EducationDay.builder()
+                .user(userToSave)
+                .wordIds(new ArrayList<>())
+                .day(1)
+                .build();
+
+        educationDayRepository.save(educationDay);
 
         // 6. 토큰 생성 및 저장
         try {
@@ -206,6 +219,36 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+    public List<ProfileUnlockedResponse> getProfileUnlocked() {
+        User user = getCurrentLoggedInMember();
+        int count = educationStampRepository.countByUser(user);
+        int newCount = count / 5 + 5;
+        int maxImageNumber = 16; // 현재 이미지가 16번까지 있다고 가정합니다.
+        List<ProfileUnlockedResponse> response = new ArrayList<>();
+
+        for (int i = 1; i <= maxImageNumber; i++) {
+            boolean isUnlocked = i <= newCount;
+            String url = String.format("https://horong-service.s3.ap-northeast-2.amazonaws.com/profileImg/%s.png", i);
+
+            response.add(new ProfileUnlockedResponse(i, isUnlocked, url));
+        }
+
+        return response;
+    }
+
+
+    public UserProfileDetailResponse updateProfileImage(Integer profileImageNumber) {
+        log.info("[UserService] 프로필 이미지 변경");
+        User user = getCurrentLoggedInMember();
+        user.setProfileImg(profileImageNumber.toString());
+        userRepository.save(user);
+        UserProfileDetailResponse response = UserProfileDetailResponse.of(
+                generatePreSignedUrl(user.getProfileImg()),
+                user.getNickname()
+        );
+        return response;
+    }
+
     private boolean isDuplicateUserId(String userId) {
         User user = userRepository.findByUserId(userId)
                 .orElse(null);
@@ -231,13 +274,13 @@ public class UserServiceImpl implements UserService {
         if (imageUrl == null) {
             return "";
         }
-        String imagePath = extractImagePath(imageUrl);
-        return s3Util.getPresignedUrlFromS3(imagePath);
+//        String imagePath = extractImagePath(imageUrl);
+        return s3Util.getProfilePresignedUrlFromS3(imageUrl);
     }
 
-    private String extractImagePath(String imageUrl) {
-        return imageUrl.substring(imageUrl.indexOf("profileImg/"));
-    }
+//    private String extractImagePath(String imageUrl) {
+//        return imageUrl.substring(imageUrl.indexOf("profileImg/"));
+//    }
 
     private String getUpdatedField(String newValue, String currentValue) {
         return (newValue == null || newValue.isEmpty()) ? currentValue : newValue;

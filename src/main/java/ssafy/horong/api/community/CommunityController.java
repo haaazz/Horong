@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.api.CommonResponse;
 import ssafy.horong.api.community.request.*;
 import ssafy.horong.api.community.response.GetAllMessageListResponse;
+import ssafy.horong.api.community.response.GetCommentResponse;
 import ssafy.horong.api.community.response.GetMessageListResponse;
 import ssafy.horong.api.community.response.GetPostResponse;
 import ssafy.horong.api.health.TestRequest;
@@ -164,6 +165,24 @@ public class CommunityController {
     public CommonResponse<Map<BoardType, List<GetPostResponse>>> getMainPostList() {
         log.info("[CommunityController] 게시판 메인 리스트 조회");
         Map<BoardType, List<GetPostResponse>> response = communityService.getMainPostList();
+        return CommonResponse.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "게시글 원본 조회", description = "게시글의 원본을 조회하는 API입니다.")
+    @GetMapping("/original/post/{postId}")
+    public CommonResponse<GetPostResponse> getOriginalPost(@PathVariable Long postId) {
+        log.info("[CommunityController] 게시글 원본 조회 >>>> postId: {}", postId);
+        GetPostResponse response = communityService.getOriginalPost(postId);
+        return CommonResponse.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "댓글 원본 조회", description = "댓글의 원본을 조회하는 API입니다.")
+    @GetMapping("/original/comment/{commentId}")
+    public CommonResponse<GetCommentResponse> getOriginalComment(@PathVariable Long commentId) {
+        log.info("[CommunityController] 댓글 원본 조회 >>>> commentId: {}", commentId);
+        GetCommentResponse response = communityService.getOriginalComment(commentId);
         return CommonResponse.ok(response);
     }
 }
