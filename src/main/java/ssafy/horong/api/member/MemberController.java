@@ -11,12 +11,11 @@ import ssafy.horong.api.CommonResponse;
 import ssafy.horong.api.member.request.PasswordUpdateRequest;
 import ssafy.horong.api.member.request.UserSignupRequest;
 import ssafy.horong.api.member.request.UserUpdateRequest;
-import ssafy.horong.api.member.response.UserDetailResponse;
-import ssafy.horong.api.member.response.UserIdResponse;
-import ssafy.horong.api.member.response.UserProfileDetailResponse;
-import ssafy.horong.api.member.response.UserSignupResponse;
+import ssafy.horong.api.member.response.*;
 import ssafy.horong.domain.member.common.Language;
 import ssafy.horong.domain.member.service.UserService;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -116,5 +115,23 @@ public class MemberController {
         log.info("[UserController] 사용자 언어 변경 >>>> language: {}", language);
         userService.updateLanguage(language);
         return CommonResponse.ok("언어가 성공적으로 변경되었습니다.", null);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "프로필 잠금 여부 조회", description = "프로필 잠금 여부를 조회하는 API입니다.")
+    @GetMapping("/profile/unlocked")
+    public CommonResponse<List<ProfileUnlockedResponse> > getProfileUnlocked() {
+        log.info("[UserController] 프로필 잠금 여부 조회");
+        List<ProfileUnlockedResponse> isUnlocked = userService.getProfileUnlocked();
+        return CommonResponse.ok(isUnlocked);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "프로필 이미지 변경", description = "프로필 이미지를 변경하는 API입니다.")
+    @PatchMapping("/profile/image")
+    public CommonResponse<UserProfileDetailResponse> updateProfileImage(@RequestParam Integer profileImage) {
+        log.info("[UserController] 프로필 이미지 변경 >>>> profileImage: {}", profileImage);
+        UserProfileDetailResponse response = userService.updateProfileImage(profileImage);
+        return CommonResponse.ok(response);
     }
 }

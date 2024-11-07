@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ssafy.horong.domain.education.entity.EducationStamp;
+import ssafy.horong.domain.member.entity.User;
 
 import java.time.LocalDate;
 
@@ -12,4 +13,6 @@ public interface EducationStampRepository extends JpaRepository<EducationStamp, 
             "FROM EducationStamp es " +
             "WHERE es.user.id = :userId AND DATE(es.createdAt) = :day")
     boolean existsByUserIdAndCreatedAtDateOnly(@Param("userId") Long userId, @Param("day") LocalDate day);
+
+    int countByUser(User user);
 }

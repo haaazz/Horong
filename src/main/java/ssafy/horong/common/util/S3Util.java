@@ -125,6 +125,25 @@ public class S3Util {
         }
     }
 
+    public String getProfilePresignedUrlFromS3(String number) {
+        try {
+            String imagePath = "profileImg/" + number + ".png";
+            String objectKey = extractObjectKey(imagePath);
+
+            GetObjectRequest getObjectRequest = createGetObjectRequest(objectKey);
+            GetObjectPresignRequest getObjectPresignRequest = createGetObjectPresignRequest(getObjectRequest);
+
+            PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(getObjectPresignRequest);
+            URL presignedUrl = presignedRequest.url();
+
+            log.info("{} 이미지에 대한 presigned URL 생성 성공", objectKey);
+            return presignedUrl.toString();
+        } catch (Exception e) {
+            log.error("Presigned URL 생성 중 오류 발생: {}", e.getMessage());
+            throw new PresignedUrlGenerationFailException();
+        }
+    }
+
     public URI getS3UrlFromS3(String imagePath) {
         // imagePath에서 S3 객체 키 추출
         String objectKey = extractObjectKey(imagePath);
