@@ -170,7 +170,7 @@ public class CommunityController {
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 원본 조회", description = "게시글의 원본을 조회하는 API입니다.")
-    @GetMapping("/original/{postId}")
+    @GetMapping("/original/post/{postId}")
     public CommonResponse<GetPostResponse> getOriginalPost(@PathVariable Long postId) {
         log.info("[CommunityController] 게시글 원본 조회 >>>> postId: {}", postId);
         GetPostResponse response = communityService.getOriginalPost(postId);
@@ -179,7 +179,7 @@ public class CommunityController {
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "댓글 원본 조회", description = "댓글의 원본을 조회하는 API입니다.")
-    @GetMapping("/original{commentId}")
+    @GetMapping("/original/comment/{commentId}")
     public CommonResponse<GetCommentResponse> getOriginalComment(@PathVariable Long commentId) {
         log.info("[CommunityController] 댓글 원본 조회 >>>> commentId: {}", commentId);
         GetCommentResponse response = communityService.getOriginalComment(commentId);
