@@ -1,6 +1,7 @@
 package ssafy.horong.api.community.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import ssafy.horong.domain.community.entity.Message;
 
 public record GetMessageListResponse(
         @Schema(description = "메시지 내용", example = "안녕하세요")
@@ -13,9 +14,12 @@ public record GetMessageListResponse(
         Long senderId,
 
         @Schema(description = "전송 시간", example = "2021-07-01T00:00:00")
-        String createdAt
+        String createdAt,
+
+        @Schema(description = "사용자여부", example = "USER")
+        Message.UserMessageType userMessageType
 ) {
-    public GetMessageListResponse of(String content, String senderNickname, Long senderId, String createdAt) {
-        return new GetMessageListResponse(content, senderNickname, senderId, createdAt);
+    public GetMessageListResponse of(String content, String senderNickname, Long senderId, String createdAt, Message.UserMessageType userMessageType) {
+        return new GetMessageListResponse(content, senderNickname, senderId, createdAt, userMessageType);
     }
 }

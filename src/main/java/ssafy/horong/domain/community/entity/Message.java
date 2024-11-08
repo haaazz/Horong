@@ -44,4 +44,8 @@ public class Message {
     public void readMessage() {
         this.isRead = true;
     }
+
+    public enum UserMessageType {
+        USER, OPPONENT
+    }
 }
