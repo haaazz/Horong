@@ -30,7 +30,7 @@ public class NotificationController {
     @Operation(summary = "알림 스트림", description = "알림을 스트림으로 전송합다.")
     @GetMapping("/stream")
     public SseEmitter streamNotifications() {
-        SseEmitter emitter = new SseEmitter(600000L); // 60초 동안 연결 유지
+        SseEmitter emitter = new SseEmitter(100000L); // 60초 동안 연결 유지
         notificationUtil.addEmitter(emitter);
 
         emitter.onCompletion(() -> notificationUtil.removeEmitter(emitter));
