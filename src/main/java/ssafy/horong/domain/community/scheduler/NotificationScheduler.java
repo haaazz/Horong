@@ -53,9 +53,9 @@ public class NotificationScheduler {
 
         for (User user : users) {
             notificationUtil.sendMergedNotifications(user); // 각 사용자에 대해 알림 전송
-            log.info("알림 전송 완료: {}", user);
+//            log.info("알림 전송 완료: {}", user);
         }
-        log.info("모든 사용자에 대한 알림 전송 완료, {}", users);
+//        log.info("모든 사용자에 대한 알림 전송 완료, {}", users);
     }
 }
 
