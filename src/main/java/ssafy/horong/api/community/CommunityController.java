@@ -19,6 +19,7 @@ import ssafy.horong.api.community.response.*;
 import ssafy.horong.api.health.TestRequest;
 import ssafy.horong.domain.community.entity.BoardType;
 import ssafy.horong.domain.community.entity.ChatRoom;
+import ssafy.horong.domain.community.repository.ChatRoomRepository;
 import ssafy.horong.domain.community.service.CommunityService;
 
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.Map;
 @Tag(name = "community", description = "커뮤니티")
 public class CommunityController {
     private final CommunityService communityService;
+    private final ChatRoomRepository chatRoomRepository;
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 생성", description = """
@@ -193,5 +195,16 @@ public class CommunityController {
         log.info("[CommunityController] 채팅룸 생성 >>>> request: {}, {}", postId, userId);
         ChatRoom response = communityService.createChatRoom(userId, postId);
         return CommonResponse.ok(response.getId());
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "채팅방 존재 여부 확인", description = "채팅방이 존재하는지 확인하는 API입니다.")
+    @GetMapping("/chatroom/check")
+    public CommonResponse<Boolean> checkChatRoom(
+            @RequestParam Long postId,
+            @RequestParam Long userId) {
+        log.info("[CommunityController] 채팅방 존재 여부 확인 >>>> request: {}, {}", postId, userId);
+        boolean response = chatRoomRepository.existsByUserAndPost(userId, postId);
+        return CommonResponse.ok(response);
     }
 }
