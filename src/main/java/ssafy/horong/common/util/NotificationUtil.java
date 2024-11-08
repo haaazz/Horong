@@ -10,6 +10,8 @@ import ssafy.horong.domain.member.entity.User;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -59,7 +61,6 @@ public class NotificationUtil {
 
     public SseEmitter createSseEmitter() {
         SseEmitter emitter = new SseEmitter(100000L);
-
         emitters.add(emitter);
 
         emitter.onCompletion(() -> emitters.remove(emitter));
@@ -73,6 +74,22 @@ public class NotificationUtil {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        // 일정 시간마다 더미 이벤트 전송
+        Timer timer = new Timer(true);
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    emitter.send(SseEmitter.event()
+                            .name("keepAlive")
+                            .data("keep connection alive"));
+                } catch (IOException e) {
+                    emitters.remove(emitter);
+                    timer.cancel(); // 연결이 끊어졌다면 타이머도 중단
+                }
+            }
+        }, 0, 15000); // 15초 간격으로 더미 이벤트 전송
 
         return emitter;
     }

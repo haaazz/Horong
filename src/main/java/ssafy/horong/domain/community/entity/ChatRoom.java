@@ -34,6 +34,7 @@ public class ChatRoom {
     /**
      * 현재 사용자가 호스트 또는 게스트인지 확인하고,
      * 상대방을 반환하는 메서드.
+     *
      */
     public User getOpponent(User currentUser) {
         if (currentUser.equals(host)) {
