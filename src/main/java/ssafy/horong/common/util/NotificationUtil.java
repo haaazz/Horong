@@ -22,8 +22,8 @@ public class NotificationUtil {
 
     public void sendMergedNotifications(User user) {
         // 읽지 않은 댓글과 메시지를 각각 리스트로 가져옴
-        List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(user, Notification.NotificationType.COMMENT);
-        List<Notification> unreadMessageNotifications = notificationRepository.findByUserAndIsReadFalseAndType(user, Notification.NotificationType.MESSAGE);
+        List<Notification> unreadCommentNotifications = notificationRepository.findByReceiverAndIsReadFalseAndType(user, Notification.NotificationType.COMMENT);
+        List<Notification> unreadMessageNotifications = notificationRepository.findByReceiverAndIsReadFalseAndType(user, Notification.NotificationType.MESSAGE);
 
         // 각각의 알림 메시지를 문자열 리스트로 변환
         List<String> unreadComments = unreadCommentNotifications.stream()

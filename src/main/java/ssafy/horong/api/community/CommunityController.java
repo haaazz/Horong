@@ -182,4 +182,16 @@ public class CommunityController {
         GetCommentResponse response = communityService.getOriginalComment(commentId);
         return CommonResponse.ok(response);
     }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "채팅룸 생성", description = "채팅룸을 생성하는 API입니다.")
+    @PostMapping("/chatroom")
+    public CommonResponse<Void> createChatRoom(
+            @RequestParam Long postId,
+            @RequestParam Long userId) {
+        log.info("[CommunityController] 채팅룸 생성 >>>> request: {}, {}", postId, userId);
+        communityService.createChatRoom(userId, postId);
+        return CommonResponse.ok("채팅룸이 생성되었습니다.", null);
+    }
+
 }

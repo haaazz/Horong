@@ -1,5 +1,6 @@
 package ssafy.horong.domain.community.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.safety.Safelist;
@@ -55,6 +56,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final BoardRepository boardRepository;
     private final ContentImageRepository contentImageRepository;
     private final ContentByCountryRepository contentByLanguageRepository;
+    private final ChatRoomRepository chatRoomRepository;
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -268,7 +270,8 @@ public class CommunityServiceImpl implements CommunityService {
         User postAuthor = post.getAuthor();
         if (!postAuthor.equals(getCurrentUser())) {
             Notification notification = Notification.builder()
-                    .user(postAuthor)
+                    .receiver(postAuthor)
+                    .sender(getCurrentUser())
                     .message("게시글에 새로운 댓글이 작성되었습니다: " + command.contentByCountries().get(0).content())
                     .isRead(false)
                     .createdAt(LocalDateTime.now())
@@ -277,8 +280,8 @@ public class CommunityServiceImpl implements CommunityService {
         }
 
         // 읽지 않은 댓글과 메시지를 각각 리스트로 가져옴
-        List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(postAuthor, Notification.NotificationType.COMMENT);
-        List<Notification> unreadMessageNotifications = notificationRepository.findByUserAndIsReadFalseAndType(postAuthor, Notification.NotificationType.MESSAGE);
+        List<Notification> unreadCommentNotifications = notificationRepository.findByReceiverAndIsReadFalseAndType(postAuthor, Notification.NotificationType.COMMENT);
+        List<Notification> unreadMessageNotifications = notificationRepository.findByReceiverAndIsReadFalseAndType(postAuthor, Notification.NotificationType.MESSAGE);
 
         // 각각의 알림 메시지를 문자열 리스트로 변환
         List<String> unreadComments = unreadCommentNotifications.stream()
@@ -316,34 +319,48 @@ public class CommunityServiceImpl implements CommunityService {
         if (command.contentByCountries() != null && !command.contentByCountries().isEmpty()) {
             List<ContentByLanguage> existingContentByCountries = comment.getContentByCountries();
 
-            command.contentByCountries().forEach(contentRequest -> {
-                // 기존 ContentByLanguage 엔터티를 찾기
-                ContentByLanguage existingContent = existingContentByCountries.stream()
-                        .filter(content -> content.getLanguage() != null && content.getLanguage().equals(contentRequest.language()))
-                        .findFirst()
-                        .orElseGet(() -> {
-                            ContentByLanguage newContent = ContentByLanguage.builder()
-                                    .comment(comment)
-                                    .language(contentRequest.language())
-                                    .build();
-                            existingContentByCountries.add(newContent);
-                            return newContent;
-                        });
+            for (CreateContentByLanguageRequest contentRequest : command.contentByCountries()) {
+                // language 필터 조건을 분리하여 기존 ContentByLanguage 엔터티 찾기
+                ContentByLanguage existingContent = null;
+                for (ContentByLanguage content : existingContentByCountries) {
+                    if (content.getLanguage() != null && content.getLanguage().equals(contentRequest.language())) {
+                        existingContent = content;
+                        break;
+                    }
+                    else if (contentRequest.isOriginal() == content.isOriginal()) {
+                        existingContent = content;
+                        break;
+                    }
+                }
+
+                // 기존 엔터티가 없으면 새로운 엔터티 생성
+                if (existingContent == null) {
+                    existingContent = ContentByLanguage.builder()
+                            .comment(comment)
+                            .language(contentRequest.language())
+                            .build();
+                    existingContentByCountries.add(existingContent);
+                }
 
                 // 기존 엔터티의 필드 업데이트
                 existingContent.setContent(contentRequest.content());
                 existingContent.setOriginal(contentRequest.isOriginal());
-            });
-
-            // 삭제할 항목 처리 (기존 리스트에 있지만 새 요청에 없는 항목)
-            existingContentByCountries.removeIf(existingContent ->
-                    existingContent.getLanguage() != null && command.contentByCountries().stream()
-                            .noneMatch(contentRequest -> contentRequest.language() != null && contentRequest.language().equals(existingContent.getLanguage()))
-            );
+            }
         }
 
         comment.setUpdatedAt(LocalDateTime.now());
         commentRepository.save(comment);
+    }
+
+    @Transactional
+    @Override
+    public void createChatRoom(Long userId, Long postId) {
+        ChatRoom chatRoom = ChatRoom.builder()
+                .host(getCurrentUser())
+                .post(postRepository.findById(postId).orElseThrow(null))
+                .guest(userRepository.findById(userId).orElseThrow(null))
+                .build();
+        chatRoomRepository.save(chatRoom);
     }
 
     @Transactional
@@ -372,22 +389,30 @@ public class CommunityServiceImpl implements CommunityService {
                 })
                 .toList();
 
-        User receiver = userRepository.findByNickname(command.receiverNickname())
-                .orElseThrow(() -> new RuntimeException("수신자를 찾을 수 없습니다."));
-
         Message message = Message.builder()
+                .chatRoom(chatRoomRepository.findById(command.chatRoomId()).orElseThrow(null))
                 .contentByCountries(contentByCountries)
-                .sender(getCurrentUser())
-                .receiver(receiver)
-                .createdAt(LocalDateTime.now())
+                .user(getCurrentUser())
                 .build();
 
         contentByCountries.forEach(contentByLanguage -> contentByLanguage.setMessage(message));
         messageRepository.save(message);
 
+        User receiver = chatRoomRepository.findById(command.chatRoomId()).orElseThrow(null).getOpponent(getCurrentUser());
+        Notification notification = Notification.builder()
+                .receiver(receiver)
+                .sender(getCurrentUser())
+                .message("메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content())
+                .isRead(false)
+                .createdAt(LocalDateTime.now())
+                .type(Notification.NotificationType.MESSAGE)
+                .build();
+
+        notificationRepository.save(notification);
+
         // 읽지 않은 댓글과 메시지를 각각 리스트로 가져옴
-        List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(receiver, Notification.NotificationType.COMMENT);
-        List<Notification> unreadMessageNotifications = notificationRepository.findByUserAndIsReadFalseAndType(receiver, Notification.NotificationType.MESSAGE);
+        List<Notification> unreadCommentNotifications = notificationRepository.findByReceiverAndIsReadFalseAndType(receiver, Notification.NotificationType.COMMENT);
+        List<Notification> unreadMessageNotifications = notificationRepository.findByReceiverAndIsReadFalseAndType(receiver, Notification.NotificationType.MESSAGE);
 
         // 각각의 알림 메시지를 문자열 리스트로 변환
         List<String> unreadComments = unreadCommentNotifications.stream()
@@ -408,43 +433,50 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Override
     public List<GetAllMessageListResponse> getAllMessageList() {
-        List<Message> messages = messageRepository.findByReceiverWithContents(getCurrentUser());
-        log.info("모든 메시지 조회: {}", messages);
+        List<ChatRoom> chatRooms = chatRoomRepository.findAllByUser(getCurrentUser());
+        log.info("모든 채팅방 조회: {}", chatRooms);
 
-        return messages.stream()
-                .collect(Collectors.groupingBy(Message::getSender))
-                .entrySet().stream()
-                .map(entry -> {
-                    User sender = entry.getKey();
-                    List<Message> senderMessages = entry.getValue();
+        return chatRooms.stream()
+                .map(chatRoom -> {
+                    User opponent = chatRoom.getOpponent(getCurrentUser());
+                    List<Message> messages = chatRoom.getMessages();
 
-                    long unreadCount = senderMessages.stream()
-                            .filter(message -> !message.isRead()) // 읽지 않은 메시지만 필터링
+                    long unreadCount = messages.stream()
+                            .filter(message -> !message.isRead() && !message.getUser().equals(getCurrentUser()))
                             .count();
 
                     // 최신 메시지 기준으로 정렬
-                    senderMessages.sort(Comparator.comparing(Message::getCreatedAt).reversed());
+                    messages.sort(Comparator.comparing(Message::getCreatedAt));
 
-                    Message lastMessage = senderMessages.get(0);
-                    String lastContent = lastMessage.getContentByCountries().stream()
-                            .filter(c -> c.getLanguage() == getCurrentUser().getLanguage())
-                            .findFirst()
-                            .map(ContentByLanguage::getContent)
-                            .orElse(null);
+                    log.info("메시지 리스트: {}", messages);
+                    log.info("메시지 내용들, {}", messages.stream().map(Message::getContentByCountries).toList());
+
+                    Message lastMessage = messages.get(0);
+                    String lastContent = null;
+                    for (ContentByLanguage content : lastMessage.getContentByCountries()) {
+                        log.info("언어: {}, 유저 언어 {}", content.getLanguage(), getCurrentUser().getLanguage());
+                        if (content.getLanguage() != null && content.getLanguage().equals(getCurrentUser().getLanguage())) {
+                            lastContent = content.getContent();
+                            break;
+                        }
+                    }
+
+                    log.info("마지막 콘텐츠", lastContent);
 
                     return new GetAllMessageListResponse(
                             unreadCount,
                             lastContent,
-                            sender.getNickname(),
-                            sender.getId(),
-                            lastMessage.getCreatedAt().toString()
-
+                            opponent.getNickname(),
+                            opponent.getId(),
+                            lastMessage.getCreatedAt().toString(),
+                            chatRoom.getPost().getId()  // postId 추가
                     );
                 })
                 .sorted(Comparator.comparing((GetAllMessageListResponse response) -> {
                     String senderNickname = response.senderNickname();
-                    return messages.stream()
-                            .filter(m -> m.getSender().getNickname().equals(senderNickname))
+                    return chatRooms.stream()
+                            .flatMap(chatRoom -> chatRoom.getMessages().stream())
+                            .filter(message -> message.getChatRoom().getOpponent(getCurrentUser()).getNickname().equals(senderNickname))
                             .max(Comparator.comparing(Message::getCreatedAt))
                             .map(Message::getCreatedAt)
                             .orElse(LocalDateTime.MIN);
@@ -456,9 +488,8 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     public List<GetMessageListResponse> getMessageList(GetMessageListCommand command) {
         // createdAt 내림차순으로 정렬
-        List<Message> messages = messageRepository.findMessagesBetweenUsers(
-                command.senderId(),
-                getCurrentUser().getId()
+        List<Message> messages = messageRepository.findAllByChatRoomId(
+            command.roomId()
         );
         Language userLanguage = getCurrentUser().getLanguage();
 
@@ -473,13 +504,12 @@ public class CommunityServiceImpl implements CommunityService {
                     message.readMessage();
                     messageRepository.save(message);
 
-                    Message.UserMessageType userMessageType = message.getSender().getId().equals(getCurrentUser().getId())
+                    Message.UserMessageType userMessageType = message.getUser().getId().equals(getCurrentUser().getId())
                             ? Message.UserMessageType.USER
                             : Message.UserMessageType.OPPONENT;
 
-
                     log.info("읽음여부 {}, {}", message.isRead(), message.getId());
-                    return new GetMessageListResponse(content, message.getSender().getNickname(), message.getSender().getId(), message.getCreatedAt().toString(), userMessageType);
+                    return new GetMessageListResponse(content, message.getUser().getNickname(), message.getUser().getId(), message.getCreatedAt().toString(), userMessageType);
                 })
                 .toList();
     }
