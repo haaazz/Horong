@@ -5,10 +5,10 @@ import ssafy.horong.domain.community.command.GetMessageListCommand;
 
 @Schema(description = "메시지 리스트 요청")
 public record GetMessageListRequest(
-        @Schema(description = "전송자 ID", example = "1")
-        Long senderId
+        @Schema(description = "방 ID", example = "1")
+        Long roomId
 ) {
     public GetMessageListCommand toCommand() {
-        return new GetMessageListCommand(senderId);
+        return new GetMessageListCommand(roomId);
     }
 }
