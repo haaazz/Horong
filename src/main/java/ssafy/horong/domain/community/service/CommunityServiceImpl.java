@@ -473,8 +473,13 @@ public class CommunityServiceImpl implements CommunityService {
                     message.readMessage();
                     messageRepository.save(message);
 
+                    Message.UserMessageType userMessageType = message.getSender().getId().equals(getCurrentUser().getId())
+                            ? Message.UserMessageType.USER
+                            : Message.UserMessageType.OPPONENT;
+
+
                     log.info("읽음여부 {}, {}", message.isRead(), message.getId());
-                    return new GetMessageListResponse(content, message.getSender().getNickname(), message.getSender().getId(), message.getCreatedAt().toString());
+                    return new GetMessageListResponse(content, message.getSender().getNickname(), message.getSender().getId(), message.getCreatedAt().toString(), userMessageType);
                 })
                 .toList();
     }
