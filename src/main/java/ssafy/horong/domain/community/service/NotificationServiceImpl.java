@@ -32,7 +32,7 @@ public class NotificationServiceImpl implements NotificationService {
         notificationRepository.save(notification);
 
         User user = getCurrentUser();
-        notificationUtil.sendMergedNotifications(user); // NotificationUtil을 사용하여 알림 전송
+        notificationUtil.sendMergedNotifications(user);
     }
 
     private User getCurrentUser() {

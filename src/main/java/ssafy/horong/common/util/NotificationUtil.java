@@ -60,7 +60,7 @@ public class NotificationUtil {
     }
 
     public SseEmitter createSseEmitter() {
-        SseEmitter emitter = new SseEmitter(100000L);
+        SseEmitter emitter = new SseEmitter(600000L);
         emitters.add(emitter);
 
         emitter.onCompletion(() -> emitters.remove(emitter));
@@ -89,7 +89,7 @@ public class NotificationUtil {
                     timer.cancel(); // 연결이 끊어졌다면 타이머도 중단
                 }
             }
-        }, 0, 15000); // 15초 간격으로 더미 이벤트 전송
+        }, 0, 5000); // 5초 간격으로 더미 이벤트 전송
 
         return emitter;
     }
