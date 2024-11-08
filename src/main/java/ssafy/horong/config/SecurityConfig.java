@@ -65,6 +65,9 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(corsProperties.allowedOrigins());
         configuration.setAllowedMethods(corsProperties.allowedMethods());
         configuration.setAllowedHeaders(corsProperties.allowedHeaders());
+
+        configuration.addAllowedHeader("cache-control");
+        
         configuration.setAllowCredentials(corsProperties.allowedCredentials());
         configuration.setExposedHeaders(corsProperties.exposedHeaders());
         configuration.setMaxAge(corsProperties.oneHour());

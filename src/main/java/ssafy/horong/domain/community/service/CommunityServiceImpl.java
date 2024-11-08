@@ -438,6 +438,7 @@ public class CommunityServiceImpl implements CommunityService {
                             sender.getNickname(),
                             sender.getId(),
                             lastMessage.getCreatedAt().toString()
+
                     );
                 })
                 .sorted(Comparator.comparing((GetAllMessageListResponse response) -> {
