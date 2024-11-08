@@ -1,6 +1,5 @@
 package ssafy.horong.domain.community.service;
 
-import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.safety.Safelist;
@@ -10,7 +9,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.ResourceNotFoundException;
-import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.jsoup.Jsoup;
@@ -56,6 +54,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final S3Util s3Util;
     private final BoardRepository boardRepository;
     private final ContentImageRepository contentImageRepository;
+    private final ContentByCountryRepository contentByLanguageRepository;
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -128,48 +127,100 @@ public class CommunityServiceImpl implements CommunityService {
         Post post = postRepository.findById(command.postId())
                 .orElseThrow(PostNotFoundException::new);
 
-        List<ContentByLanguage> updatedContentEntities = command.content().stream()
-                .map(c -> {
-                    ContentByLanguage existingContent = post.getContentByCountries().stream()
-                            .filter(content -> content.getLanguage() != null && content.getLanguage().equals(c.language()))
-                            .findFirst()
-                            .orElseGet(() -> {
-                                ContentByLanguage newContent = ContentByLanguage.builder()
-                                        .post(post)
-                                        .language(c.language())
-                                        .contentType(CONTENT)
-                                        .build();
-                                post.getContentByCountries().add(newContent);
-                                return newContent;
-                            });
+        List<ContentByLanguage> updatedContentEntities = new ArrayList<>();
 
-                    existingContent.setContent(c.content());
-                    existingContent.setOriginal(c.isOriginal());
+        for (CreateContentByLanguageRequest c : command.content()) {
+            ContentByLanguage existingTitleContent = null;
+            ContentByLanguage existingMainContent = null;
 
-                    // 기존 이미지를 삭제하고 새 이미지 추가하는 대신 리스트를 직접 수정
-                    List<ContentImage> existingImages = existingContent.getContentImages();
-                    List<String> newImageUrls = command.contentImageRequest().stream()
-                            .map(ContentImageRequest::imageUrl)
-                            .map(imageUrl -> imageUrl.substring(imageUrl.indexOf("community/")))
-                            .collect(Collectors.toList());
-
-                    // 새로운 URL에 해당하지 않는 기존 이미지를 제거
-                    existingImages.removeIf(image -> !newImageUrls.contains(image.getImageUrl()));
-
-                    // 기존에 없는 새로운 이미지만 추가
-                    for (String imageUrl : newImageUrls) {
-                        if (existingImages.stream().noneMatch(image -> image.getImageUrl().equals(imageUrl))) {
-                            ContentImage newImage = ContentImage.builder()
-                                    .imageUrl(imageUrl)
-                                    .content(existingContent)
-                                    .build();
-                            existingImages.add(newImage);
-                        }
+            // 기존 TITLE 콘텐츠 검색
+            for (ContentByLanguage content : post.getContentByCountries()) {
+                if (content.getLanguage() != null && content.getLanguage().equals(c.language())
+                        && content.getContentType() == ContentByLanguage.ContentType.TITLE) {
+                    if (content.isOriginal() == c.isOriginal()) {
+                        existingTitleContent = content;
+                        break;
                     }
+                }
+            }
 
-                    return existingContent;
-                })
-                .collect(Collectors.toList());
+            // 기존 CONTENT 콘텐츠 검색
+            for (ContentByLanguage content : post.getContentByCountries()) {
+                if (content.getLanguage() != null && content.getLanguage().equals(c.language())
+                        && content.getContentType() == ContentByLanguage.ContentType.CONTENT) {
+                    if (content.isOriginal() == c.isOriginal()) {
+                        existingMainContent = content;
+                        break;
+                    }
+                }
+            }
+
+            // 기존 TITLE 콘텐츠가 있으면 수정하거나 추가 처리
+            if (existingTitleContent != null) {
+                existingTitleContent.setContent(c.title());
+                existingTitleContent.setOriginal(c.isOriginal());
+            } else {
+                // 기존 TITLE 콘텐츠가 없으면 새로 생성
+                ContentByLanguage newTitleContent = ContentByLanguage.builder()
+                        .post(post)
+                        .language(c.language())
+                        .contentType(ContentByLanguage.ContentType.TITLE)
+                        .content(c.title())
+                        .isOriginal(c.isOriginal())
+                        .build();
+                post.getContentByCountries().add(newTitleContent);
+            }
+
+            // 기존 CONTENT 콘텐츠가 있으면 수정하거나 추가 처리
+            if (existingMainContent != null) {
+                existingMainContent.setContent(c.content());
+                existingMainContent.setOriginal(c.isOriginal());
+            } else {
+                // 기존 CONTENT 콘텐츠가 없으면 새로 생성
+                ContentByLanguage newMainContent = ContentByLanguage.builder()
+                        .post(post)
+                        .language(c.language())
+                        .contentType(ContentByLanguage.ContentType.CONTENT)
+                        .content(c.content())
+                        .isOriginal(c.isOriginal())
+                        .build();
+                post.getContentByCountries().add(newMainContent);
+            }
+
+            contentByLanguageRepository.save(existingTitleContent);
+            contentByLanguageRepository.save(existingMainContent);
+
+            // 기존 이미지를 삭제하고 새 이미지 추가 대신 리스트를 직접 수정
+            List<ContentImage> existingImages = existingMainContent.getContentImages();
+            List<String> newImageUrls = new ArrayList<>();
+            for (ContentImageRequest imageRequest : command.contentImageRequest()) {
+                String imageUrl = imageRequest.imageUrl().substring(imageRequest.imageUrl().indexOf("community/"));
+                newImageUrls.add(imageUrl);
+            }
+
+            // 새로운 URL에 해당하지 않는 기존 이미지를 제거
+            existingImages.removeIf(image -> !newImageUrls.contains(image.getImageUrl()));
+
+            // 기존에 없는 새로운 이미지만 추가
+            for (String imageUrl : newImageUrls) {
+                boolean exists = false;
+                for (ContentImage image : existingImages) {
+                    if (image.getImageUrl().equals(imageUrl)) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
+                    ContentImage newImage = ContentImage.builder()
+                            .imageUrl(imageUrl)
+                            .content(existingMainContent)
+                            .build();
+                    existingImages.add(newImage);
+                }
+            }
+
+            updatedContentEntities.add(existingMainContent);
+        }
 
         post.setContentByCountries(updatedContentEntities);
         postRepository.save(post);
@@ -177,7 +228,9 @@ public class CommunityServiceImpl implements CommunityService {
         // Elasticsearch에 업데이트
         postElasticsearchRepository.deleteById(String.valueOf(post.getId()));
         savePostDocument(post, command.content());
+        log.info("게시글 업데이트: {}", post);
     }
+
 
     @Transactional
     @Override
