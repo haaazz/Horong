@@ -12,7 +12,7 @@ import ssafy.horong.domain.community.service.NotificationService;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/nocifications")
+@RequestMapping("/notifications")
 public class NotificationController {
 
     private final NotificationService notificationService;
@@ -28,7 +28,7 @@ public class NotificationController {
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "알림 스트림", description = "알림을 스트림으로 전송합다.")
-    @GetMapping("/notifications/stream")
+    @GetMapping("/stream")
     public SseEmitter streamNotifications() {
         SseEmitter emitter = new SseEmitter(600000L); // 60초 동안 연결 유지
         notificationUtil.addEmitter(emitter);
