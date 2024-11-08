@@ -26,6 +26,11 @@ public class NotificationController {
         return CommonResponse.ok("알림이 읽음 처리되었습니다.", null);
     }
 
+//    @GetMapping("/sse/connect")
+//    public SseEmitter connectToSse() {
+//        return createSseEmitter();
+//    }
+
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "알림 스트림", description = "알림을 스트림으로 전송합다.")
     @GetMapping("/stream")

@@ -24,7 +24,7 @@ public record GetAllMessageListResponse(
         @Schema(description = "게시글 id", example = "1")
         Long postId
 ) {
-    public static GetAllMessageListResponse of(Long messageCount, String content, String senderNickname, Long senderId, String createdAt, Long postId) {
-        return new GetAllMessageListResponse(messageCount, content, senderNickname, senderId, createdAt, postId);
+    public static GetAllMessageListResponse of(Long roomId ,Long messageCount, String content, String senderNickname, Long senderId, String createdAt, Long postId) {
+        return new GetAllMessageListResponse(roomId ,messageCount, content, senderNickname, senderId, createdAt, postId);
     }
 }
