@@ -293,40 +293,41 @@ public class CommunityServiceImpl implements CommunityService {
         validateUserOrAdmin(comment.getAuthor());
 
         if (command.contentByCountries() != null && !command.contentByCountries().isEmpty()) {
-            List<ContentByLanguage> existingContentByCountries = comment.getContentByCountries();
+            // 기존 ContentByLanguage 리스트를 맵으로 변환하여 빠르게 검색할 수 있도록 함
+            Map<String, ContentByLanguage> contentMap = comment.getContentByCountries().stream()
+                    .collect(Collectors.toMap(
+                            content -> content.getLanguage() + "-" + content.isOriginal(),
+                            content -> content
+                    ));
 
             for (CreateContentByLanguageRequest contentRequest : command.contentByCountries()) {
-                // language 필터 조건을 분리하여 기존 ContentByLanguage 엔터티 찾기
-                ContentByLanguage existingContent = null;
-                for (ContentByLanguage content : existingContentByCountries) {
-                    if (content.getLanguage() != null && content.getLanguage().equals(contentRequest.language())) {
-                        existingContent = content;
-                        break;
-                    }
-                    else if (contentRequest.isOriginal() == content.isOriginal()) {
-                        existingContent = content;
-                        break;
-                    }
-                }
+                // `language`와 `isOriginal`의 조합을 키로 생성
+                String key = contentRequest.language() + "-" + contentRequest.isOriginal();
+
+                // 맵에서 기존 엔터티 찾기
+                ContentByLanguage existingContent = contentMap.get(key);
 
                 // 기존 엔터티가 없으면 새로운 엔터티 생성
                 if (existingContent == null) {
                     existingContent = ContentByLanguage.builder()
                             .comment(comment)
                             .language(contentRequest.language())
+                            .isOriginal(contentRequest.isOriginal())
+                            .content(contentRequest.content())
                             .build();
-                    existingContentByCountries.add(existingContent);
+                    comment.getContentByCountries().add(existingContent);
+                } else {
+                    // 기존 엔터티의 필드 업데이트
+                    existingContent.setContent(contentRequest.content());
+                    existingContent.setOriginal(contentRequest.isOriginal());
                 }
-
-                // 기존 엔터티의 필드 업데이트
-                existingContent.setContent(contentRequest.content());
-                existingContent.setOriginal(contentRequest.isOriginal());
             }
         }
 
         comment.setUpdatedAt(LocalDateTime.now());
         commentRepository.save(comment);
     }
+
 
     @Transactional
     @Override
