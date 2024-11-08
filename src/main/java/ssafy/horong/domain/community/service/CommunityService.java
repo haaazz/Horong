@@ -6,6 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.api.community.response.*;
 import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.entity.BoardType;
+import ssafy.horong.domain.community.entity.ChatRoom;
 import ssafy.horong.domain.community.entity.Notification;
 import ssafy.horong.domain.community.entity.Post;
 import ssafy.horong.domain.member.entity.User;
@@ -30,5 +31,5 @@ public interface CommunityService {
     Map<BoardType, List<GetPostResponse>> getMainPostList();
     GetOriginPostResponse getOriginalPost(Long id);
     GetCommentResponse getOriginalComment(Long commentId);
-    void createChatRoom(Long userId, Long postId);
+    ChatRoom createChatRoom(Long userId, Long postId);
 }
