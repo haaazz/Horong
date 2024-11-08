@@ -18,6 +18,7 @@ import ssafy.horong.api.community.request.*;
 import ssafy.horong.api.community.response.*;
 import ssafy.horong.api.health.TestRequest;
 import ssafy.horong.domain.community.entity.BoardType;
+import ssafy.horong.domain.community.entity.ChatRoom;
 import ssafy.horong.domain.community.service.CommunityService;
 
 import java.util.List;
@@ -186,12 +187,11 @@ public class CommunityController {
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "채팅룸 생성", description = "채팅룸을 생성하는 API입니다.")
     @PostMapping("/chatroom")
-    public CommonResponse<Void> createChatRoom(
+    public CommonResponse<ChatRoom> createChatRoom(
             @RequestParam Long postId,
             @RequestParam Long userId) {
         log.info("[CommunityController] 채팅룸 생성 >>>> request: {}, {}", postId, userId);
-        communityService.createChatRoom(userId, postId);
-        return CommonResponse.ok("채팅룸이 생성되었습니다.", null);
+        ChatRoom response = communityService.createChatRoom(userId, postId);
+        return CommonResponse.ok(response);
     }
-
 }

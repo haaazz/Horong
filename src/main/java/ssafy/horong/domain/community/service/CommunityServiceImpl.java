@@ -331,13 +331,14 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Transactional
     @Override
-    public void createChatRoom(Long userId, Long postId) {
+    public ChatRoom createChatRoom(Long userId, Long postId) {
         ChatRoom chatRoom = ChatRoom.builder()
                 .host(getCurrentUser())
                 .post(postRepository.findById(postId).orElseThrow(null))
                 .guest(userRepository.findById(userId).orElseThrow(null))
                 .build();
         chatRoomRepository.save(chatRoom);
+        return chatRoom;
     }
 
     @Transactional
