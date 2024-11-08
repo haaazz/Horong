@@ -304,7 +304,8 @@ public class CommunityServiceImpl implements CommunityService {
                 .collect(Collectors.toList());
 
         // 병합된 리스트를 전송
-        notificationUtil.sendNotificationToUser(combinedNotifications, postAuthor.getId()); // 수정된 부분
+        notificationUtil.sendNotificationToUser(combinedNotifications, postAuthor.getId());
+        log.info("알람 목록 전송: {}", combinedNotifications);
     }
 
     @Transactional
@@ -448,9 +449,7 @@ public class CommunityServiceImpl implements CommunityService {
                     User opponent = chatRoom.getOpponent(getCurrentUser());
                     List<Message> messages = chatRoom.getMessages();
 
-                    long unreadCount = messages.stream()
-                            .filter(message -> !message.isRead() && !message.getUser().equals(getCurrentUser()))
-                            .count();
+                    long unreadCount = messageRepository.countUnreadMessagesByOpponent(chatRoom, getCurrentUser());
 
                     // 최신 메시지 기준으로 정렬
                     messages.sort(Comparator.comparing(Message::getCreatedAt));
