@@ -57,7 +57,7 @@ public class NotificationUtil {
         }
     }
 
-    public SseEmitter gcreateSseEmitter() {
+    public SseEmitter createSseEmitter() {
         SseEmitter emitter = new SseEmitter(100000L);
 
         emitters.add(emitter);
