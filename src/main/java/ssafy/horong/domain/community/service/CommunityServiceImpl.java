@@ -57,6 +57,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final ContentImageRepository contentImageRepository;
     private final ContentByCountryRepository contentByLanguageRepository;
     private final ChatRoomRepository chatRoomRepository;
+    private final ContentByCountryRepository contentByCountryRepository;
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -129,48 +130,25 @@ public class CommunityServiceImpl implements CommunityService {
         Post post = postRepository.findById(command.postId())
                 .orElseThrow(PostNotFoundException::new);
 
-        List<ContentByLanguage> updatedContentEntities = new ArrayList<>();
+        // contentByCountries의 기존 콘텐츠를 language와 type 기준으로 맵핑하여 조회
+        Map<Language, ContentByLanguage> titleContentMap = new HashMap<>();
+        Map<Language, ContentByLanguage> mainContentMap = new HashMap<>();
+
+        for (ContentByLanguage content : post.getContentByCountries()) {
+            if (content.getContentType() == ContentByLanguage.ContentType.TITLE) {
+                titleContentMap.put(content.getLanguage(), content);
+            } else if (content.getContentType() == ContentByLanguage.ContentType.CONTENT) {
+                mainContentMap.put(content.getLanguage(), content);
+            }
+        }
 
         for (CreateContentByLanguageRequest c : command.content()) {
-            log.info("언어: {}, 제목: {}, 내용: {}", c.language(), c.title(), c.content());
-            log.info("post: {}", post);
-            ContentByLanguage existingTitleContent = null;
-            ContentByLanguage existingMainContent = null;
-
-            // 기존 TITLE 콘텐츠 검색
-            for (ContentByLanguage content : post.getContentByCountries()) {
-                if (content.getLanguage() != null && content.getLanguage().equals(c.language())
-                        && content.getContentType() == ContentByLanguage.ContentType.TITLE) {
-                    existingTitleContent = content;
-                    break;
-                }
-                if (content.isOriginal() == c.isOriginal()) {
-                    existingTitleContent = content;
-                    log.info("기존 TITLE 콘텐츠: {}", existingTitleContent);
-                    break;
-                }
-            }
-
-            // 기존 CONTENT 콘텐츠 검색
-            for (ContentByLanguage content : post.getContentByCountries()) {
-                if (content.getLanguage() != null && content.getLanguage().equals(c.language())
-                        && content.getContentType() == ContentByLanguage.ContentType.CONTENT) {
-                    existingMainContent = content;
-                    break;
-                }
-                if (content.isOriginal() == c.isOriginal()) {
-                    existingMainContent = content;
-                    log.info("기존 CONTENT 콘텐츠: {}", existingMainContent);
-                    break;
-                }
-            }
-
-            // 기존 TITLE 콘텐츠가 있으면 수정하거나 추가 처리
+            // TITLE 콘텐츠 업데이트 또는 추가
+            ContentByLanguage existingTitleContent = titleContentMap.get(c.language());
             if (existingTitleContent != null) {
                 existingTitleContent.setContent(c.title());
-                existingTitleContent.setOriginal(c.isOriginal());
+                contentByLanguageRepository.save(existingTitleContent);
             } else {
-                // 기존 TITLE 콘텐츠가 없으면 새로 생성
                 ContentByLanguage newTitleContent = ContentByLanguage.builder()
                         .post(post)
                         .language(c.language())
@@ -179,14 +157,16 @@ public class CommunityServiceImpl implements CommunityService {
                         .isOriginal(c.isOriginal())
                         .build();
                 post.getContentByCountries().add(newTitleContent);
+                contentByLanguageRepository.save(newTitleContent);
             }
 
-            // 기존 CONTENT 콘텐츠가 있으면 수정하거나 추가 처리
+            // CONTENT 콘텐츠 업데이트 또는 추가
+            ContentByLanguage existingMainContent = mainContentMap.get(c.language());
             if (existingMainContent != null) {
                 existingMainContent.setContent(c.content());
                 existingMainContent.setOriginal(c.isOriginal());
+                contentByLanguageRepository.save(existingMainContent);
             } else {
-                // 기존 CONTENT 콘텐츠가 없으면 새로 생성
                 ContentByLanguage newMainContent = ContentByLanguage.builder()
                         .post(post)
                         .language(c.language())
@@ -195,51 +175,39 @@ public class CommunityServiceImpl implements CommunityService {
                         .isOriginal(c.isOriginal())
                         .build();
                 post.getContentByCountries().add(newMainContent);
+                contentByLanguageRepository.save(newMainContent);
             }
 
-            contentByLanguageRepository.save(existingTitleContent);
-            contentByLanguageRepository.save(existingMainContent);
+            // 이미지 업데이트 로직
+            if (existingMainContent != null) {
+                List<ContentImage> existingImages = existingMainContent.getContentImages();
+                List<String> newImageUrls = command.contentImageRequest().stream()
+                        .map(imageRequest -> imageRequest.imageUrl().substring(imageRequest.imageUrl().indexOf("community/")))
+                        .toList();
 
-            // 기존 이미지를 삭제하고 새 이미지 추가 대신 리스트를 직접 수정
-            List<ContentImage> existingImages = existingMainContent.getContentImages();
-            List<String> newImageUrls = new ArrayList<>();
-            for (ContentImageRequest imageRequest : command.contentImageRequest()) {
-                String imageUrl = imageRequest.imageUrl().substring(imageRequest.imageUrl().indexOf("community/"));
-                newImageUrls.add(imageUrl);
-            }
+                existingImages.removeIf(image -> !newImageUrls.contains(image.getImageUrl()));
 
-            // 새로운 URL에 해당하지 않는 기존 이미지를 제거
-            existingImages.removeIf(image -> !newImageUrls.contains(image.getImageUrl()));
-
-            // 기존에 없는 새로운 이미지만 추가
-            for (String imageUrl : newImageUrls) {
-                boolean exists = false;
-                for (ContentImage image : existingImages) {
-                    if (image.getImageUrl().equals(imageUrl)) {
-                        exists = true;
-                        break;
+                for (String imageUrl : newImageUrls) {
+                    if (existingImages.stream().noneMatch(image -> image.getImageUrl().equals(imageUrl))) {
+                        ContentImage newImage = ContentImage.builder()
+                                .imageUrl(imageUrl)
+                                .content(existingMainContent)
+                                .build();
+                        existingImages.add(newImage);
                     }
                 }
-                if (!exists) {
-                    ContentImage newImage = ContentImage.builder()
-                            .imageUrl(imageUrl)
-                            .content(existingMainContent)
-                            .build();
-                    existingImages.add(newImage);
-                }
             }
-
-            updatedContentEntities.add(existingMainContent);
         }
 
-        post.setContentByCountries(updatedContentEntities);
         postRepository.save(post);
 
-        // Elasticsearch에 업데이트
+        // Elasticsearch 업데이트
         postElasticsearchRepository.deleteById(String.valueOf(post.getId()));
         savePostDocument(post, command.content());
         log.info("게시글 업데이트: {}", post);
     }
+
+
 
     @Transactional
     @Override
