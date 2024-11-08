@@ -187,11 +187,11 @@ public class CommunityController {
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "채팅룸 생성", description = "채팅룸을 생성하는 API입니다.")
     @PostMapping("/chatroom")
-    public CommonResponse<ChatRoom> createChatRoom(
+    public CommonResponse<Long> createChatRoom(
             @RequestParam Long postId,
             @RequestParam Long userId) {
         log.info("[CommunityController] 채팅룸 생성 >>>> request: {}, {}", postId, userId);
         ChatRoom response = communityService.createChatRoom(userId, postId);
-        return CommonResponse.ok(response);
+        return CommonResponse.ok(response.getId());
     }
 }

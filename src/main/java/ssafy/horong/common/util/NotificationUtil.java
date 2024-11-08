@@ -10,6 +10,7 @@ import ssafy.horong.domain.member.entity.User;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -18,7 +19,7 @@ import java.util.stream.Stream;
 public class NotificationUtil {
 
     private final NotificationRepository notificationRepository;
-    private final List<SseEmitter> emitters = new ArrayList<>(); // SseEmitter 리스트 추가
+    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>(); // SseEmitter 리스트 추가
 
     public void sendMergedNotifications(User user) {
         // 읽지 않은 댓글과 메시지를 각각 리스트로 가져옴
@@ -47,20 +48,17 @@ public class NotificationUtil {
             return;
         }
 
-        // 메시지를 하나의 문자열로 합침
         String combinedMessage = String.join("\n", messages);
 
-        List<SseEmitter> deadEmitters = new ArrayList<>();
-        emitters.forEach(emitter -> {
+        for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event()
                         .name("notification")
                         .data("User ID: " + userId + " - " + combinedMessage));
             } catch (IOException e) {
-                deadEmitters.add(emitter);
+                emitters.remove(emitter); // 실패한 emitter 즉시 제거
             }
-        });
-        emitters.removeAll(deadEmitters);
+        }
     }
 
     public void addEmitter(SseEmitter emitter) {
@@ -70,4 +68,25 @@ public class NotificationUtil {
     public void removeEmitter(SseEmitter emitter) {
         emitters.remove(emitter);
     }
+
+    public SseEmitter createSseEmitter() {
+        SseEmitter emitter = new SseEmitter(100000L); // 100초로 타임아웃 설정
+
+        emitters.add(emitter);
+
+        emitter.onCompletion(() -> emitters.remove(emitter));
+        emitter.onTimeout(() -> emitters.remove(emitter));
+        emitter.onError(e -> emitters.remove(emitter));
+
+        try {
+            emitter.send(SseEmitter.event()
+                    .name("connect")
+                    .data("connected")); // 503 에러 방지용 더미 데이터
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return emitter;
+    }
+
 }

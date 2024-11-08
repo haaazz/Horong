@@ -3,6 +3,9 @@ package ssafy.horong.api.community.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record GetAllMessageListResponse(
+        @Schema(description = "방id", example = "1")
+        Long roomId,
+
         @Schema(description = "메시지 수", example = "1")
         Long messageCount,
 

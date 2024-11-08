@@ -440,6 +440,7 @@ public class CommunityServiceImpl implements CommunityService {
                     log.info("마지막 콘텐츠", lastContent);
 
                     return new GetAllMessageListResponse(
+                            chatRoom.getId(),
                             unreadCount,
                             lastContent,
                             opponent.getNickname(),
