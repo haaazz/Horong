@@ -1,3 +1,4 @@
+// NotificationController.java
 package ssafy.horong.api.community;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,22 +27,10 @@ public class NotificationController {
         return CommonResponse.ok("알림이 읽음 처리되었습니다.", null);
     }
 
-//    @GetMapping("/sse/connect")
-//    public SseEmitter connectToSse() {
-//        return createSseEmitter();
-//    }
-
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
-    @Operation(summary = "알림 스트림", description = "알림을 스트림으로 전송합다.")
+    @Operation(summary = "알림 스트림", description = "알림을 스트림으로 전송합니다.")
     @GetMapping("/stream")
     public SseEmitter streamNotifications() {
-        SseEmitter emitter = new SseEmitter(100000L); // 60초 동안 연결 유지
-        notificationUtil.addEmitter(emitter);
-
-        emitter.onCompletion(() -> notificationUtil.removeEmitter(emitter));
-        emitter.onTimeout(() -> notificationUtil.removeEmitter(emitter));
-        emitter.onError((e) -> notificationUtil.removeEmitter(emitter));
-
-        return emitter;
+        return notificationUtil.createSseEmitter();
     }
 }
