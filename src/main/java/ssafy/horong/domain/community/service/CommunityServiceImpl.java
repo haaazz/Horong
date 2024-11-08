@@ -132,6 +132,8 @@ public class CommunityServiceImpl implements CommunityService {
         List<ContentByLanguage> updatedContentEntities = new ArrayList<>();
 
         for (CreateContentByLanguageRequest c : command.content()) {
+            log.info("언어: {}, 제목: {}, 내용: {}", c.language(), c.title(), c.content());
+            log.info("post: {}", post);
             ContentByLanguage existingTitleContent = null;
             ContentByLanguage existingMainContent = null;
 
@@ -139,10 +141,13 @@ public class CommunityServiceImpl implements CommunityService {
             for (ContentByLanguage content : post.getContentByCountries()) {
                 if (content.getLanguage() != null && content.getLanguage().equals(c.language())
                         && content.getContentType() == ContentByLanguage.ContentType.TITLE) {
-                    if (content.isOriginal() == c.isOriginal()) {
-                        existingTitleContent = content;
-                        break;
-                    }
+                    existingTitleContent = content;
+                    break;
+                }
+                if (content.isOriginal() == c.isOriginal()) {
+                    existingTitleContent = content;
+                    log.info("기존 TITLE 콘텐츠: {}", existingTitleContent);
+                    break;
                 }
             }
 
@@ -150,10 +155,13 @@ public class CommunityServiceImpl implements CommunityService {
             for (ContentByLanguage content : post.getContentByCountries()) {
                 if (content.getLanguage() != null && content.getLanguage().equals(c.language())
                         && content.getContentType() == ContentByLanguage.ContentType.CONTENT) {
-                    if (content.isOriginal() == c.isOriginal()) {
-                        existingMainContent = content;
-                        break;
-                    }
+                    existingMainContent = content;
+                    break;
+                }
+                if (content.isOriginal() == c.isOriginal()) {
+                    existingMainContent = content;
+                    log.info("기존 CONTENT 콘텐츠: {}", existingMainContent);
+                    break;
                 }
             }
 
@@ -232,7 +240,6 @@ public class CommunityServiceImpl implements CommunityService {
         savePostDocument(post, command.content());
         log.info("게시글 업데이트: {}", post);
     }
-
 
     @Transactional
     @Override
