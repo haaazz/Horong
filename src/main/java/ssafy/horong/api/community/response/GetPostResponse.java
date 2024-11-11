@@ -2,6 +2,7 @@ package ssafy.horong.api.community.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.net.URI;
 import java.util.List;
 
 @Schema(description = "게시글 상세 응답 DTO")
@@ -25,5 +26,8 @@ public record GetPostResponse(
         String createdAt,
 
         @Schema(description = "댓글 리스트")
-        List<GetCommentResponse> comments
+        List<GetCommentResponse> comments,
+
+        @Schema(description = "작성자 프로필 이미지", example = "https://horong.s3.ap-northeast-2.amazonaws.com/profile/1.jpg")
+        URI profileImage
 ) {}
