@@ -16,7 +16,7 @@ public record GetMessageListResponse(
         Long senderId,
 
         @Schema(description = "전송자 프로필 이미지", example = "https://horong.s3.ap-northeast-2.amazonaws.com/profile/1.jpg")
-        URI profileImage,
+        String profileImage,
 
         @Schema(description = "전송 시간", example = "2021-07-01T00:00:00")
         String createdAt,
@@ -24,7 +24,7 @@ public record GetMessageListResponse(
         @Schema(description = "사용자여부", example = "USER")
         Message.UserMessageType userMessageType
 ) {
-    public GetMessageListResponse of(String content, String senderNickname, Long senderId, URI profileImage ,String createdAt, Message.UserMessageType userMessageType) {
+    public GetMessageListResponse of(String content, String senderNickname, Long senderId, String profileImage ,String createdAt, Message.UserMessageType userMessageType) {
         return new GetMessageListResponse(content, senderNickname, senderId, profileImage, createdAt, userMessageType);
     }
 }
