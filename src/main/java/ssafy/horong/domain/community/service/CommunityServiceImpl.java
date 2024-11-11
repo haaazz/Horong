@@ -621,7 +621,7 @@ public class CommunityServiceImpl implements CommunityService {
     private List<ContentImage> extractMessageContentImages(List<ContentImageRequest> imageRequests) {
         return imageRequests.stream()
                 .map(ContentImageRequest::imageUrl)
-                .map(imageUrl -> imageUrl.substring(imageUrl.indexOf("message/")))
+                .map(imageUrl -> imageUrl.substring(imageUrl.indexOf("community/")))
                 .map(trimmedUrl -> ContentImage.builder().imageUrl(trimmedUrl).build())
                 .toList();
     }
