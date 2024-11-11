@@ -246,6 +246,7 @@ public class CommunityServiceImpl implements CommunityService {
                             lastContent,
                             opponent.getNickname(),
                             opponent.getId(),
+                            s3Util.getS3UrlFromS3(opponent.getProfileImg()),
                             lastMessage.getCreatedAt().toString(),
                             chatRoom.getPost().getId()
                     );
@@ -273,7 +274,7 @@ public class CommunityServiceImpl implements CommunityService {
                             ? Message.UserMessageType.USER
                             : Message.UserMessageType.OPPONENT;
 
-                    return new GetMessageListResponse(content, message.getUser().getNickname(), message.getUser().getId(), message.getCreatedAt().toString(), userMessageType);
+                    return new GetMessageListResponse(content, message.getUser().getNickname(), message.getUser().getId(),s3Util.getS3UrlFromS3(message.getUser().getProfileImg()), message.getCreatedAt().toString(), userMessageType);
                 })
                 .toList();
 
@@ -304,7 +305,8 @@ public class CommunityServiceImpl implements CommunityService {
                 post.getAuthor().getId(),
                 content,
                 post.getCreatedAt().toString(),
-                commentResponses
+                commentResponses,
+                s3Util.getS3UrlFromS3(post.getAuthor().getProfileImg())
         );
     }
 
@@ -338,7 +340,8 @@ public class CommunityServiceImpl implements CommunityService {
                             post.getAuthor().getId(),
                             content,
                             post.getCreatedAt().toString(),
-                            commentResponses
+                            commentResponses,
+                            s3Util.getS3UrlFromS3(post.getAuthor().getProfileImg())
                     );
                 })
                 .toList();
@@ -379,7 +382,8 @@ public class CommunityServiceImpl implements CommunityService {
                             author != null ? author.getId() : null,
                             content,
                             createdAt,
-                            List.of()
+                            List.of(),
+                            s3Util.getS3UrlFromS3(post.getAuthor().getProfileImg())
                     );
                 })
                 .sorted(Comparator.comparing(GetPostResponse::createdAt).reversed())
@@ -437,7 +441,8 @@ public class CommunityServiceImpl implements CommunityService {
                 post.getAuthor().getId(),
                 content,
                 post.getCreatedAt().toString(),
-                commentResponses
+                commentResponses,
+                s3Util.getS3UrlFromS3(post.getAuthor().getProfileImg())
         ),
                 contentImageRepository.findImageUrlsByContent(originalContent));
     }
@@ -456,7 +461,8 @@ public class CommunityServiceImpl implements CommunityService {
                 comment.getAuthor().getNickname(),
                 comment.getAuthor().getId(),
                 content,
-                comment.getCreatedAt().toString()
+                comment.getCreatedAt().toString(),
+                s3Util.getS3UrlFromS3(comment.getAuthor().getProfileImg())
         );
     }
 
@@ -487,7 +493,8 @@ public class CommunityServiceImpl implements CommunityService {
                             post.getAuthor().getId(),
                             content,
                             post.getCreatedAt().toString(),
-                            commentResponses
+                            commentResponses,
+                            s3Util.getS3UrlFromS3(post.getAuthor().getProfileImg())
                     );
                 })
                 .sorted(Comparator.comparing(GetPostResponse::createdAt).reversed())
@@ -553,6 +560,7 @@ public class CommunityServiceImpl implements CommunityService {
                                 "deleted",
                                 null,
                                 "삭제된 댓글입니다.",
+                                null,
                                 null
                         );
                     }
@@ -564,7 +572,8 @@ public class CommunityServiceImpl implements CommunityService {
                             comment.getAuthor().getNickname(),
                             comment.getAuthor().getId(),
                             content,
-                            comment.getCreatedAt().toString()
+                            comment.getCreatedAt().toString(),
+                            s3Util.getS3UrlFromS3(comment.getAuthor().getProfileImg())
                     );
                 })
                 .toList();
