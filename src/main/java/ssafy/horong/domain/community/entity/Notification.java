@@ -27,6 +27,8 @@ public class Notification {
     private User sender;
 
     private String message;
+
+    private Long originContentId;
     private boolean isRead;
     private LocalDateTime createdAt;
 

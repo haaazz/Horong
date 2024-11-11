@@ -128,7 +128,7 @@ public class CommunityServiceImpl implements CommunityService {
         comment.setContentByCountries(contentByCountries);
         commentRepository.save(comment);
 
-        notifyUser(post.getAuthor(), "게시글에 새로운 댓글이 작성되었습니다: " + command.contentByCountries().get(0).content(), Notification.NotificationType.COMMENT);
+        notifyUser(post.getAuthor(), "게시글에 새로운 댓글이 작성되었습니다: " + command.contentByCountries().get(0).content(), Notification.NotificationType.COMMENT, post.getId());
         log.info("알람 전송: {}", post.getAuthor().getNickname());
     }
 
@@ -219,7 +219,7 @@ public class CommunityServiceImpl implements CommunityService {
         messageRepository.save(message);
 
         User receiver = message.getChatRoom().getOpponent(getCurrentUser());
-        notifyUser(receiver, "메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content(), Notification.NotificationType.MESSAGE);
+        notifyUser(receiver, "메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content(), Notification.NotificationType.MESSAGE, message.getId());
         log.info("메시지 전송: {}", receiver.getNickname());
     }
 
@@ -235,7 +235,7 @@ public class CommunityServiceImpl implements CommunityService {
 
                     long unreadCount = messageRepository.countUnreadMessagesByOpponent(chatRoom, getCurrentUser());
 
-                    messages.sort(Comparator.comparing(Message::getCreatedAt));
+                    messages.sort(Comparator.comparing(Message::getCreatedAt).reversed());
 
                     Message lastMessage = messages.get(0);
                     String lastContent = getContentByLanguage(lastMessage.getContentByCountries(), getCurrentUser().getLanguage());
@@ -264,8 +264,10 @@ public class CommunityServiceImpl implements CommunityService {
                 .map(message -> {
                     String content = getContentByLanguage(message.getContentByCountries(), userLanguage);
 
-                    message.readMessage();
-                    messageRepository.save(message);
+                    if (!message.getUser().getId().equals(getCurrentUser().getId())) {
+                        message.readMessage();
+                        messageRepository.save(message);
+                    }
 
                     Message.UserMessageType userMessageType = message.getUser().getId().equals(getCurrentUser().getId())
                             ? Message.UserMessageType.USER
@@ -708,30 +710,35 @@ public class CommunityServiceImpl implements CommunityService {
         }
     }
 
-    private void notifyUser(User receiver, String messageContent, Notification.NotificationType type) {
+    private void notifyUser(User receiver, String messageContent, Notification.NotificationType type, Long originContentId) {
         if (!receiver.equals(getCurrentUser())) {
+            // 알림 생성 및 저장
             Notification notification = Notification.builder()
                     .receiver(receiver)
                     .sender(getCurrentUser())
                     .message(messageContent)
+                    .originContentId(originContentId)
                     .isRead(false)
                     .createdAt(LocalDateTime.now())
                     .type(type)
                     .build();
             notificationRepository.save(notification);
 
-            List<String> combinedNotifications = getCombinedNotifications(receiver);
+            // Notification 객체 리스트로 알림 가져오기
+            List<Notification> combinedNotifications = getCombinedNotifications(receiver);
+
+            // 사용자에게 알림 전송
             notificationUtil.sendNotificationToUser(combinedNotifications, receiver.getId());
-            log.info("알람 목록 전송: {}", combinedNotifications);
+
+            // 로그 출력
+            log.info("알림 목록 전송: {}", combinedNotifications);
         }
     }
 
-    private List<String> getCombinedNotifications(User receiver) {
+    private List<Notification> getCombinedNotifications(User receiver) {
+        // 사용자의 읽지 않은 모든 알림을 가져옵니다.
         List<Notification> unreadNotifications = notificationRepository.findByReceiverAndIsReadFalse(receiver);
-
-        return unreadNotifications.stream()
-                .map(Notification::getMessage)
-                .toList();
+        return unreadNotifications;
     }
 
     private String getContentByLanguage(Post post, Language language, ContentByLanguage.ContentType contentType) {

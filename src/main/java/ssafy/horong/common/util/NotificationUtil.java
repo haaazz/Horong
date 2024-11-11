@@ -8,10 +8,7 @@ import ssafy.horong.domain.community.repository.NotificationRepository;
 import ssafy.horong.domain.member.entity.User;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
@@ -26,47 +23,52 @@ public class NotificationUtil {
 
 
     public void sendMergedNotifications(User user) {
-        List<Notification> unreadCommentNotifications = notificationRepository.findByReceiverAndIsReadFalseAndType(user, Notification.NotificationType.COMMENT);
-        List<Notification> unreadMessageNotifications = notificationRepository.findByReceiverAndIsReadFalseAndType(user, Notification.NotificationType.MESSAGE);
+        // Fetch unread comment notifications
+        List<Notification> unreadCommentNotifications = notificationRepository
+                .findByReceiverAndIsReadFalseAndType(user, Notification.NotificationType.COMMENT);
 
-        List<String> unreadComments = unreadCommentNotifications.stream()
-                .map(Notification::getMessage)
-                .collect(Collectors.toList());
+        // Fetch unread message notifications
+        List<Notification> unreadMessageNotifications = notificationRepository
+                .findByReceiverAndIsReadFalseAndType(user, Notification.NotificationType.MESSAGE);
 
-        List<String> unreadMessages = unreadMessageNotifications.stream()
-                .map(Notification::getMessage)
-                .collect(Collectors.toList());
+        // Combine both lists into one
+        List<Notification> combinedNotifications = new ArrayList<>();
+        combinedNotifications.addAll(unreadCommentNotifications);
+        combinedNotifications.addAll(unreadMessageNotifications);
 
-        List<String> combinedNotifications = Stream.concat(unreadComments.stream(), unreadMessages.stream())
-                .collect(Collectors.toList());
 
+        combinedNotifications.sort(Comparator.comparing(Notification::getCreatedAt).reversed());
+        // Send notifications to the user
         sendNotificationToUser(combinedNotifications, user.getId());
     }
 
-    public void sendNotificationToUser(List<String> messages, Long userId) {
-        if (messages == null || messages.isEmpty()) {
+
+    public void sendNotificationToUser(List<Notification> notifications, Long userId) {
+        if (notifications == null || notifications.isEmpty()) {
             return;
         }
-
-        String combinedMessage = String.join("\n", messages);
 
         List<SseEmitter> userEmitters = emitters.get(userId);
         if (userEmitters != null) {
             for (SseEmitter emitter : userEmitters) {
-                try {
-                    emitter.send(SseEmitter.event()
-                            .name("notification")
-                            .data(combinedMessage));
-                } catch (IOException e) {
-                    removeEmitter(userId, emitter);
+                for (Notification notification : notifications) {
+                    try {
+                        emitter.send(SseEmitter.event()
+                                .name("notification")
+                                .data(notification));
+                    } catch (IOException e) {
+                        removeEmitter(userId, emitter);
+                    }
                 }
             }
         }
     }
 
     public SseEmitter createSseEmitter() {
-        Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
-        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
+        Long userId = SecurityUtil.getLoginMemberId().orElseThrow();
+        SseEmitter emitter = new SseEmitter(600000L); // 10분 타임아웃
+
+        // 해당 userId의 리스트를 초기화하고 emitter 추가
         emitters.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(emitter);
 
         emitter.onCompletion(() -> removeEmitter(userId, emitter));
@@ -78,11 +80,25 @@ public class NotificationUtil {
                     .name("connect")
                     .data("connected"));
         } catch (IOException e) {
+            removeEmitter(userId, emitter);
             throw new RuntimeException(e);
         }
 
-        // Keep-Alive 기능 유지
-        startKeepAlive(emitter, userId);
+        // 일정 시간마다 더미 이벤트 전송
+        Timer timer = new Timer(true);
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    emitter.send(SseEmitter.event()
+                            .name("keepAlive")
+                            .data("keep connection alive"));
+                } catch (IOException e) {
+                    removeEmitter(userId, emitter);
+                    timer.cancel(); // 연결이 끊어지면 타이머 중단
+                }
+            }
+        }, 0, 60000); // 5초 간격으로 더미 이벤트 전송
 
         return emitter;
     }

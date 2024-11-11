@@ -31,6 +31,8 @@ public class NotificationController {
     @Operation(summary = "알림 스트림", description = "알림을 스트림으로 전송합니다.")
     @GetMapping("/stream")
     public SseEmitter streamNotifications() {
+        System.out.println("streamNotifications 메서드 호출됨 - 호출 원인 확인 필요");
         return notificationUtil.createSseEmitter();
     }
+
 }
