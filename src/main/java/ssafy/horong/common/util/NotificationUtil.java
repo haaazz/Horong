@@ -1,4 +1,3 @@
-// NotificationUtil.java
 package ssafy.horong.common.util;
 
 import lombok.RequiredArgsConstructor;
@@ -60,7 +59,7 @@ public class NotificationUtil {
     }
 
     public SseEmitter createSseEmitter() {
-        SseEmitter emitter = new SseEmitter(600000L);
+        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
         emitters.add(emitter);
 
         emitter.onCompletion(() -> emitters.remove(emitter));
@@ -92,6 +91,10 @@ public class NotificationUtil {
         }, 0, 5000); // 5초 간격으로 더미 이벤트 전송
 
         return emitter;
+    }
+
+    public List<SseEmitter> getEmitters() {
+        return emitters;
     }
 
     public void addEmitter(SseEmitter emitter) {
