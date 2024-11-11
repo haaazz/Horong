@@ -78,7 +78,7 @@ public class EducationServiceImpl implements EducationService {
 
         List<GetEducationRecordResponse> responseList = new ArrayList<>();
         for (Map.Entry<Education, List<EducationRecordResponse>> entry : groupedRecords.entrySet()) {
-            responseList.add(new GetEducationRecordResponse(entry.getKey(), entry.getValue()));
+            responseList.add(new GetEducationRecordResponse(entry.getKey().getWord(), entry.getValue()));
         }
         return responseList;
     }

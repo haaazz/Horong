@@ -33,22 +33,4 @@ public class NotificationController {
     public SseEmitter streamNotifications() {
         return notificationUtil.createSseEmitter();
     }
-
-    @PostMapping("/test")
-    public String sendTestNotification() {
-        notificationUtil.getEmitters().forEach((SseEmitter emitter) -> {
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("testNotification")
-                        .data("테스트 알림입니다."));
-                System.out.println("알림 전송 성공: 테스트 알림입니다."); // 전송 성공 로그 추가
-            } catch (IOException e) {
-                emitter.complete(); // 오류 발생 시 해당 emitter 제거
-                System.err.println("알림 전송 실패: " + e.getMessage());
-            }
-        });
-        return "Test notification sent!";
-    }
-
-
 }

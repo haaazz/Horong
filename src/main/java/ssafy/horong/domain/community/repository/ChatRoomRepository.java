@@ -7,12 +7,16 @@ import ssafy.horong.domain.community.entity.ChatRoom;
 import ssafy.horong.domain.member.entity.User;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     @Query("select c from ChatRoom c where c.host = :user or c.guest = :user")
     List<ChatRoom> findAllByUser(@Param("user") User user);
 
-    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN TRUE ELSE FALSE END FROM ChatRoom c " +
+    @Query("SELECT c.id FROM ChatRoom c " +
             "WHERE c.post.id = :postId AND (c.host.id = :userId OR c.guest.id = :userId)")
-    boolean existsByUserAndPost(@Param("userId") Long userId, @Param("postId") Long postId);
+    Optional<Long> findChatRoomIdByUserAndPost(@Param("userId") Long userId, @Param("postId") Long postId);
+
+    @Query("SELECT c.post.id FROM ChatRoom c WHERE c.id = :chatRoomId")
+    Long findPostIdByChatRoomId(@Param("chatRoomId") Long chatRoomId);
 }

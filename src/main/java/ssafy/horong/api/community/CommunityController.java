@@ -22,6 +22,7 @@ import ssafy.horong.domain.community.entity.ChatRoom;
 import ssafy.horong.domain.community.repository.ChatRoomRepository;
 import ssafy.horong.domain.community.service.CommunityService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -133,12 +134,12 @@ public class CommunityController {
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "메시지 리스트 조회", description = "메시지 리스트를 조회하는 API입니다.")
-    @GetMapping("/messages/{senderId}")
-    public CommonResponse<List<GetMessageListResponse>> getMessageList(@PathVariable Long senderId) {
-        log.info("[CommunityController] 메시지 리스트 조회 >>>> senderId: {}", senderId);
-        GetMessageListRequest request = new GetMessageListRequest(senderId);
-        List<GetMessageListResponse> response = communityService.getMessageList(request.toCommand());
-        return CommonResponse.ok(response);
+    @GetMapping("/messages/{chatroomId}")
+    public CommonResponse<GetPostIdAndMessageListResponse> getMessageList(@PathVariable Long chatroomId) {
+        log.info("[CommunityController] 메시지 리스트 조회 >>>> senderId: {}", chatroomId);
+        GetMessageListRequest request = new GetMessageListRequest(chatroomId);
+        GetPostIdAndMessageListResponse messageList = communityService.getMessageList(request.toCommand());
+        return CommonResponse.ok(messageList);
     }
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
@@ -200,11 +201,11 @@ public class CommunityController {
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "채팅방 존재 여부 확인", description = "채팅방이 존재하는지 확인하는 API입니다.")
     @GetMapping("/chatroom/check")
-    public CommonResponse<Boolean> checkChatRoom(
+    public CommonResponse<Long> checkChatRoom(
             @RequestParam Long postId,
             @RequestParam Long userId) {
         log.info("[CommunityController] 채팅방 존재 여부 확인 >>>> request: {}, {}", postId, userId);
-        boolean response = chatRoomRepository.existsByUserAndPost(userId, postId);
+        Long response = chatRoomRepository.findChatRoomIdByUserAndPost(userId, postId).orElse(-1L);
         return CommonResponse.ok(response);
     }
 }
