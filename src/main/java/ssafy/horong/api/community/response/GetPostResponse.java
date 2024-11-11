@@ -2,7 +2,6 @@ package ssafy.horong.api.community.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.net.URI;
 import java.util.List;
 
 @Schema(description = "게시글 상세 응답 DTO")

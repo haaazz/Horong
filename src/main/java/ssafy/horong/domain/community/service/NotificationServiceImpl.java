@@ -12,8 +12,6 @@ import ssafy.horong.domain.community.repository.NotificationRepository;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 
-import java.util.List;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor

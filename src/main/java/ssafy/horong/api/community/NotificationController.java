@@ -9,7 +9,6 @@ import ssafy.horong.api.CommonResponse;
 import ssafy.horong.common.util.NotificationUtil;
 import ssafy.horong.domain.community.entity.Notification;
 import ssafy.horong.domain.community.service.NotificationService;
-import java.io.IOException;
 
 
 @RestController

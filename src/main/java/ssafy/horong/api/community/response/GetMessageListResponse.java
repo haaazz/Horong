@@ -3,8 +3,6 @@ package ssafy.horong.api.community.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import ssafy.horong.domain.community.entity.Message;
 
-import java.net.URI;
-
 public record GetMessageListResponse(
         @Schema(description = "메시지 내용", example = "안녕하세요")
         String content,

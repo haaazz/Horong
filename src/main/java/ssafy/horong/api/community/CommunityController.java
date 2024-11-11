@@ -12,7 +12,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.api.CommonResponse;
 import ssafy.horong.api.community.request.*;
 import ssafy.horong.api.community.response.*;
@@ -22,7 +21,6 @@ import ssafy.horong.domain.community.entity.ChatRoom;
 import ssafy.horong.domain.community.repository.ChatRoomRepository;
 import ssafy.horong.domain.community.service.CommunityService;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 

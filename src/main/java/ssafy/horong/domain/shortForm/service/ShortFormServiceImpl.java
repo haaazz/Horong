@@ -47,6 +47,4 @@ public class ShortFormServiceImpl implements ShortFormService {
 
         return response;
     }
-
-
 }

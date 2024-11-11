@@ -3,7 +3,6 @@ package ssafy.horong.domain.education.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import ssafy.horong.domain.member.entity.User;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
