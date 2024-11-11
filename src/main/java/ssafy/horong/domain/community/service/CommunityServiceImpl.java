@@ -232,7 +232,7 @@ public class CommunityServiceImpl implements CommunityService {
                     User opponent = chatRoom.getOpponent(getCurrentUser());
                     List<Message> messages = chatRoom.getMessages();
 
-                    long unreadCount = messageRepository.countUnreadMessagesByOpponent(chatRoom, getCurrentUser());
+                    long unreadCount = messageRepository.countUnreadMessagesForOpponent(chatRoom, getCurrentUser());
 
                     messages.sort(Comparator.comparing(Message::getCreatedAt).reversed());
 

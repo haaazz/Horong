@@ -15,6 +15,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     List<Message> findAllByUser(User user);
 
-    @Query("SELECT COUNT(m) FROM Message m WHERE m.chatRoom = :chatRoom AND m.isRead = false AND m.user = :opponent")
-    long countUnreadMessagesByOpponent(@Param("chatRoom") ChatRoom chatRoom, @Param("opponent") User opponent);
+    @Query("SELECT COUNT(m) FROM Message m WHERE m.chatRoom = :chatRoom AND m.isRead = false AND m.user <> :user")
+    long countUnreadMessagesForOpponent(@Param("chatRoom") ChatRoom chatRoom, @Param("user") User user);
 }
