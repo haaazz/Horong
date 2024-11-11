@@ -9,6 +9,9 @@ public record NotificationResponse(
         Long id,
         String type,
         String message,
+        Long contentId,
+        Long senderId,
+        String senderName,
         LocalDateTime createdAt
 ) {
     // Notification을 NotificationResponse로 변환하는 static 메서드 추가
@@ -18,6 +21,9 @@ public record NotificationResponse(
                         notification.getId(),
                         notification.getType().name(),
                         notification.getMessage(),
+                        notification.getOriginContentId(),
+                        notification.getSender().getId(),
+                        notification.getSender().getNickname(),
                         notification.getCreatedAt()
                 ))
                 .collect(Collectors.toList());
