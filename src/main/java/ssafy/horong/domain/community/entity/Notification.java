@@ -28,8 +28,12 @@ public class Notification {
 
     private String message;
 
-    private Long originContentId;
+    private Long originPostId;
+
+    private Long originMessageId;
+
     private boolean isRead;
+
     private LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)

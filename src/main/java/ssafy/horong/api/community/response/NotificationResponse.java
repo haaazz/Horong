@@ -17,8 +17,11 @@ public record NotificationResponse(
         @Schema(description = "알림 메시지", example = "새로운 메시지가 도착했습니다.")
         String message,
 
-        @Schema(description = "콘텐츠 ID", example = "10")
-        Long contentId,
+        @Schema(description = "게시글 ID", example = "10")
+        Long postId,
+
+        @Schema(description = "채팅룸 id", example = "1")
+        Long chatRoomId,
 
         @Schema(description = "보낸 사람 ID", example = "1")
         Long senderId,
@@ -35,7 +38,8 @@ public record NotificationResponse(
                         notification.getId(),
                         notification.getType().name(),
                         notification.getMessage(),
-                        notification.getOriginContentId(),
+                        notification.getOriginPostId(),
+                        notification.getOriginMessageId(),
                         notification.getSender().getId(),
                         notification.getSender().getNickname(),
                         notification.getCreatedAt()

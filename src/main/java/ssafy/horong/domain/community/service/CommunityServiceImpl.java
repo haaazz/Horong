@@ -127,7 +127,7 @@ public class CommunityServiceImpl implements CommunityService {
         comment.setContentByCountries(contentByCountries);
         commentRepository.save(comment);
 
-        notifyUser(post.getAuthor(), "게시글에 새로운 댓글이 작성되었습니다: " + command.contentByCountries().get(0).content(), Notification.NotificationType.COMMENT, post.getId());
+        notifyByPostUser(post.getAuthor(), "게시글에 새로운 댓글이 작성되었습니다: " + command.contentByCountries().get(0).content(), Notification.NotificationType.COMMENT, post.getId());
         log.info("알람 전송: {}", post.getAuthor().getNickname());
     }
 
@@ -218,7 +218,7 @@ public class CommunityServiceImpl implements CommunityService {
         messageRepository.save(message);
 
         User receiver = message.getChatRoom().getOpponent(getCurrentUser());
-        notifyUser(receiver, "메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content(), Notification.NotificationType.MESSAGE, message.getId());
+        notifyByMessageUser(receiver, "메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content(), Notification.NotificationType.MESSAGE, message.getId());
         log.info("메시지 전송: {}", receiver.getNickname());
     }
 
@@ -718,14 +718,14 @@ public class CommunityServiceImpl implements CommunityService {
         }
     }
 
-    private void notifyUser(User receiver, String messageContent, Notification.NotificationType type, Long originContentId) {
+    private void notifyByPostUser(User receiver, String messageContent, Notification.NotificationType type, Long postId) {
         if (!receiver.equals(getCurrentUser())) {
             // 알림 생성 및 저장
             Notification notification = Notification.builder()
                     .receiver(receiver)
                     .sender(getCurrentUser())
                     .message(messageContent)
-                    .originContentId(originContentId)
+                    .originPostId(postId)
                     .isRead(false)
                     .createdAt(LocalDateTime.now())
                     .type(type)
@@ -745,6 +745,35 @@ public class CommunityServiceImpl implements CommunityService {
             log.info("알림 목록 전송: {}", notificationDTOs);
         }
     }
+
+    private void notifyByMessageUser(User receiver, String messageContent, Notification.NotificationType type, Long messageId) {
+        if (!receiver.equals(getCurrentUser())) {
+            // 알림 생성 및 저장
+            Notification notification = Notification.builder()
+                    .receiver(receiver)
+                    .sender(getCurrentUser())
+                    .message(messageContent)
+                    .originMessageId(messageId)
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now())
+                    .type(type)
+                    .build();
+            notificationRepository.save(notification);
+
+            // Notification 객체 리스트로 알림 가져오기
+            List<Notification> combinedNotifications = getCombinedNotifications(receiver);
+
+            // Notification 객체를 NotificationResponse DTO로 변환
+            List<NotificationResponse> notificationDTOs = NotificationResponse.convertToNotificationDTOs(combinedNotifications);
+
+            // 사용자에게 DTO로 알림 전송
+            notificationUtil.sendNotificationToUser(notificationDTOs, receiver.getId());
+
+            // 로그 출력
+            log.info("알림 목록 전송: {}", notificationDTOs);
+        }
+    }
+
 
     private List<Notification> getCombinedNotifications(User receiver) {
         // 사용자의 읽지 않은 모든 알림을 가져옵니다.
