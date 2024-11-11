@@ -9,8 +9,10 @@ import ssafy.horong.domain.member.entity.User;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -20,7 +22,8 @@ import java.util.stream.Stream;
 public class NotificationUtil {
 
     private final NotificationRepository notificationRepository;
-    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final Map<Long, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
+
 
     public void sendMergedNotifications(User user) {
         List<Notification> unreadCommentNotifications = notificationRepository.findByReceiverAndIsReadFalseAndType(user, Notification.NotificationType.COMMENT);
@@ -47,24 +50,27 @@ public class NotificationUtil {
 
         String combinedMessage = String.join("\n", messages);
 
-        for (SseEmitter emitter : emitters) {
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("notification")
-                        .data("User ID: " + userId + " - " + combinedMessage));
-            } catch (IOException e) {
-                emitters.remove(emitter);
+        List<SseEmitter> userEmitters = emitters.get(userId);
+        if (userEmitters != null) {
+            for (SseEmitter emitter : userEmitters) {
+                try {
+                    emitter.send(SseEmitter.event()
+                            .name("notification")
+                            .data(combinedMessage));
+                } catch (IOException e) {
+                    removeEmitter(userId, emitter);
+                }
             }
         }
     }
 
-    public SseEmitter createSseEmitter() {
+    public SseEmitter createSseEmitter(Long userId) {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
-        emitters.add(emitter);
+        emitters.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(emitter);
 
-        emitter.onCompletion(() -> emitters.remove(emitter));
-        emitter.onTimeout(() -> emitters.remove(emitter));
-        emitter.onError(e -> emitters.remove(emitter));
+        emitter.onCompletion(() -> removeEmitter(userId, emitter));
+        emitter.onTimeout(() -> removeEmitter(userId, emitter));
+        emitter.onError(e -> removeEmitter(userId, emitter));
 
         try {
             emitter.send(SseEmitter.event()
@@ -74,7 +80,23 @@ public class NotificationUtil {
             throw new RuntimeException(e);
         }
 
-        // 일정 시간마다 더미 이벤트 전송
+        // Keep-Alive 기능 유지
+        startKeepAlive(emitter, userId);
+
+        return emitter;
+    }
+
+    public void removeEmitter(Long userId, SseEmitter emitter) {
+        List<SseEmitter> userEmitters = emitters.get(userId);
+        if (userEmitters != null) {
+            userEmitters.remove(emitter);
+            if (userEmitters.isEmpty()) {
+                emitters.remove(userId);
+            }
+        }
+    }
+
+    private void startKeepAlive(SseEmitter emitter, Long userId) {
         Timer timer = new Timer(true);
         timer.schedule(new TimerTask() {
             @Override
@@ -84,24 +106,14 @@ public class NotificationUtil {
                             .name("keepAlive")
                             .data("keep connection alive"));
                 } catch (IOException e) {
-                    emitters.remove(emitter);
-                    timer.cancel(); // 연결이 끊어졌다면 타이머도 중단
+                    removeEmitter(userId, emitter);
+                    timer.cancel();
                 }
             }
-        }, 0, 5000); // 5초 간격으로 더미 이벤트 전송
-
-        return emitter;
+        }, 0, 5000);
     }
 
-    public List<SseEmitter> getEmitters() {
+    public Map<Long, List<SseEmitter>> getEmitters() {
         return emitters;
-    }
-
-    public void addEmitter(SseEmitter emitter) {
-        emitters.add(emitter);
-    }
-
-    public void removeEmitter(SseEmitter emitter) {
-        emitters.remove(emitter);
     }
 }
