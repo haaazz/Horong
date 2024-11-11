@@ -235,7 +235,7 @@ public class CommunityServiceImpl implements CommunityService {
 
                     long unreadCount = messageRepository.countUnreadMessagesByOpponent(chatRoom, getCurrentUser());
 
-                    messages.sort(Comparator.comparing(Message::getCreatedAt));
+                    messages.sort(Comparator.comparing(Message::getCreatedAt).reversed());
 
                     Message lastMessage = messages.get(0);
                     String lastContent = getContentByLanguage(lastMessage.getContentByCountries(), getCurrentUser().getLanguage());
@@ -264,8 +264,10 @@ public class CommunityServiceImpl implements CommunityService {
                 .map(message -> {
                     String content = getContentByLanguage(message.getContentByCountries(), userLanguage);
 
-                    message.readMessage();
-                    messageRepository.save(message);
+                    if (!message.getUser().getId().equals(getCurrentUser().getId())) {
+                        message.readMessage();
+                        messageRepository.save(message);
+                    }
 
                     Message.UserMessageType userMessageType = message.getUser().getId().equals(getCurrentUser().getId())
                             ? Message.UserMessageType.USER

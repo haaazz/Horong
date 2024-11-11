@@ -36,6 +36,8 @@ public class NotificationUtil {
         combinedNotifications.addAll(unreadCommentNotifications);
         combinedNotifications.addAll(unreadMessageNotifications);
 
+
+        combinedNotifications.sort(Comparator.comparing(Notification::getCreatedAt).reversed());
         // Send notifications to the user
         sendNotificationToUser(combinedNotifications, user.getId());
     }
