@@ -157,8 +157,29 @@ public class EducationServiceImpl implements EducationService {
         educationRecordRepository.save(educationRecord);
 
         // 기존의 EducationDay를 찾거나 오늘 날짜로 새로운 EducationDay 생성
+        LocalDateTime today = LocalDateTime.now();
         User currentUser = getCurrentUser();
-        EducationDay educationDay = getOrCreateTodayEducationDay(currentUser);
+        EducationDay educationDay = educationDayRepository.findTopByUserAndCreatedAtBeforeTodayOrderByDayDesc(currentUser, today)
+                .orElseGet(() -> {
+                    // 오늘의 EducationDay가 없을 때 가장 최근의 day 값으로 새로 생성
+                    int recentDay = educationDayRepository.findTopByUserOrderByCreatedAtDesc(currentUser)
+                            .map(EducationDay::getDay)
+                            .orElse(0);  // 가장 최근의 값이 없으면 0으로 설정
+
+                    // day가 0인 경우 기본값 1로 설정, 그렇지 않으면 가장 최근 값에 1을 더함
+                    int newDayValue = (recentDay == 0) ? 1 : recentDay + 1;
+
+                    // 새로운 EducationDay 생성
+                    EducationDay newEducationDay = EducationDay.builder()
+                            .user(currentUser)
+                            .wordIds(new ArrayList<>())  // 초기 빈 단어 목록
+                            .day(newDayValue)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+
+                    // 새로 생성한 객체를 저장하고 반환
+                    return educationDayRepository.save(newEducationDay);
+                });
 
         // 오늘의 EducationDay에 단어 ID 추가
         if (!educationDay.getWordIds().contains(education.getId().intValue())) {
@@ -167,10 +188,10 @@ public class EducationServiceImpl implements EducationService {
 
         // 5개의 단어를 학습했는지 확인
         if (educationDay.getWordIds().size() >= 5) {
-            LocalDate today = LocalDate.now();
+            LocalDate todayDate = LocalDate.now();
 
             // 오늘 날짜로 스탬프가 이미 존재하는지 확인
-            boolean stampExists = educationStampRepository.existsByUserIdAndCreatedAtDateOnly(userId, today);
+            boolean stampExists = educationStampRepository.existsByUserIdAndCreatedAtDateOnly(userId, todayDate);
             if (!stampExists) {
                 // 스탬프가 없다면 새로 생성
                 EducationStamp educationStamp = EducationStamp.builder()
