@@ -25,7 +25,7 @@ public interface CommunityService {
     void updateComment(UpdateCommentCommand command);
     void deleteComment(Long commentId);
     void sendMessage(SendMessageCommand command);
-    List<GetMessageListResponse> getMessageList(GetMessageListCommand command);
+    GetPostIdAndMessageListResponse getMessageList(GetMessageListCommand command);
     List<GetAllMessageListResponse> getAllMessageList();
     String saveImageToS3(MultipartFile file);
     Map<BoardType, List<GetPostResponse>> getMainPostList();

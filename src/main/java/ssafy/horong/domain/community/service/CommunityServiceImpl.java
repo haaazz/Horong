@@ -256,11 +256,11 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Transactional
     @Override
-    public List<GetMessageListResponse> getMessageList(GetMessageListCommand command) {
+    public GetPostIdAndMessageListResponse getMessageList(GetMessageListCommand command) {
         List<Message> messages = messageRepository.findAllByChatRoomId(command.roomId());
+        Long postId= chatRoomRepository.findPostIdByChatRoomId(command.roomId());
         Language userLanguage = getCurrentUser().getLanguage();
-
-        return messages.stream()
+        List<GetMessageListResponse> messageList = messages.stream()
                 .map(message -> {
                     String content = getContentByLanguage(message.getContentByCountries(), userLanguage);
 
@@ -274,6 +274,8 @@ public class CommunityServiceImpl implements CommunityService {
                     return new GetMessageListResponse(content, message.getUser().getNickname(), message.getUser().getId(), message.getCreatedAt().toString(), userMessageType);
                 })
                 .toList();
+
+        return GetPostIdAndMessageListResponse.of(postId, messageList);
     }
 
     @Override

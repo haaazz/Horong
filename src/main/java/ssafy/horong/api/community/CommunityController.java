@@ -135,11 +135,11 @@ public class CommunityController {
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "메시지 리스트 조회", description = "메시지 리스트를 조회하는 API입니다.")
     @GetMapping("/messages/{chatroomId}")
-    public CommonResponse<List<GetMessageListResponse>> getMessageList(@PathVariable Long chatroomId) {
+    public CommonResponse<GetPostIdAndMessageListResponse> getMessageList(@PathVariable Long chatroomId) {
         log.info("[CommunityController] 메시지 리스트 조회 >>>> senderId: {}", chatroomId);
         GetMessageListRequest request = new GetMessageListRequest(chatroomId);
-        List<GetMessageListResponse> response = communityService.getMessageList(request.toCommand());
-        return CommonResponse.ok(response);
+        GetPostIdAndMessageListResponse messageList = communityService.getMessageList(request.toCommand());
+        return CommonResponse.ok(messageList);
     }
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
