@@ -7,10 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
-import ssafy.horong.api.education.response.EducationRecordResponse;
-import ssafy.horong.api.education.response.GetEducationRecordResponse;
-import ssafy.horong.api.education.response.SaveEducationResponseFromData;
-import ssafy.horong.api.education.response.TodayWordsResponse;
+import ssafy.horong.api.education.response.*;
 import ssafy.horong.common.exception.data.DataNotFoundException;
 import ssafy.horong.common.properties.WebClientProperties;
 import ssafy.horong.common.util.S3Util;
@@ -25,6 +22,7 @@ import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -81,29 +79,42 @@ public class EducationServiceImpl implements EducationService {
         return new TodayWordsResponse(todayWords, translatedWords);
     }
 
-    public List<GetEducationRecordResponse> getAllEducationRecord() {
+    public GetAllEducationRecordResponse getAllEducationRecord() {
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
         List<EducationRecord> educationRecords = educationRecordRepository.findByUserId(userId);
-        Map<Education, List<EducationRecordResponse>> groupedRecords = new HashMap<>();
+
+        // LocalDate와 word별로 그룹화
+        Map<LocalDate, Map<String, List<EducationRecordResponse>>> groupedByDateAndWord = new HashMap<>();
 
         for (EducationRecord record : educationRecords) {
             EducationRecordResponse recordResponse = new EducationRecordResponse(
                     record.getId(),
-                    record.getEducation().getWord(),
                     record.getCer(),
                     record.getGtIdx(),
                     record.getHypIdx(),
-                    record.getDate(),
                     s3Util.getS3UrlFromS3(record.getAudio())
             );
-            groupedRecords.computeIfAbsent(record.getEducation(), k -> new ArrayList<>()).add(recordResponse);
+
+            // 날짜별로 그룹화
+            groupedByDateAndWord
+                    .computeIfAbsent(record.getDate(), date -> new HashMap<>())
+                    .computeIfAbsent(record.getEducation().getWord(), word -> new ArrayList<>())
+                    .add(recordResponse);
         }
 
-        List<GetEducationRecordResponse> responseList = new ArrayList<>();
-        for (Map.Entry<Education, List<EducationRecordResponse>> entry : groupedRecords.entrySet()) {
-            responseList.add(new GetEducationRecordResponse(entry.getKey().getWord(), entry.getValue()));
-        }
-        return responseList;
+        // Map을 List<GetEducationRecordByDayResponse>로 변환
+        List<GetEducationRecordByDayResponse> dayResponses = groupedByDateAndWord.entrySet().stream()
+                .map(dateEntry -> {
+                    LocalDate date = dateEntry.getKey();
+                    List<GetEducationRecordByWordResponse> wordResponses = dateEntry.getValue().entrySet().stream()
+                            .map(wordEntry -> new GetEducationRecordByWordResponse(wordEntry.getValue(), wordEntry.getKey()))
+                            .collect(Collectors.toList());
+                    return new GetEducationRecordByDayResponse(wordResponses, date);
+                })
+                .collect(Collectors.toList());
+
+        // 변환된 리스트를 사용하여 최종 응답 생성
+        return new GetAllEducationRecordResponse(dayResponses);
     }
 
     @Transactional
@@ -205,11 +216,9 @@ public class EducationServiceImpl implements EducationService {
         // EducationRecordResponse 생성 및 반환
         return new EducationRecordResponse(
                 educationRecord.getId(),
-                command.word(),
                 response.cer(),
                 response.gtIdx(),
                 response.hypIdx(),
-                LocalDate.now(),
                 uri
         );
     }
@@ -268,6 +277,18 @@ public class EducationServiceImpl implements EducationService {
             // 생성한 객체를 저장 후 반환
             return educationDayRepository.save(newEducationDay);
         }
+    }
+
+    public EducationRecordResponse getEducationRecordDetail(Long recordId) {
+        EducationRecord educationRecord = educationRecordRepository.findById(recordId).orElseThrow();
+
+        return new EducationRecordResponse(
+                educationRecord.getId(),
+                educationRecord.getCer(),
+                educationRecord.getGtIdx(),
+                educationRecord.getHypIdx(),
+                s3Util.getS3UrlFromS3(educationRecord.getAudio())
+        );
     }
 
 }
