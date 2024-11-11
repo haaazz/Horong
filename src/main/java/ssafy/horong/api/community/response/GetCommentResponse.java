@@ -22,6 +22,6 @@ public record GetCommentResponse(
         String createdDate,
 
         @Schema(description = "작성자 프로필 이미지", example = "https://horong.s3.ap-northeast-2.amazonaws.com/profile/1.jpg")
-        URI profileImage
+        String profileImage
 ) {
 }

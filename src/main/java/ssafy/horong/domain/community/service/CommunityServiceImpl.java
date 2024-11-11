@@ -26,6 +26,7 @@ import ssafy.horong.domain.member.common.MemberRole;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -246,7 +247,7 @@ public class CommunityServiceImpl implements CommunityService {
                             lastContent,
                             opponent.getNickname(),
                             opponent.getId(),
-                            s3Util.getS3UrlFromS3(opponent.getProfileImg()),
+                            s3Util.getProfilePresignedUrlFromS3(opponent.getProfileImg()),
                             lastMessage.getCreatedAt().toString(),
                             chatRoom.getPost().getId()
                     );
@@ -274,7 +275,7 @@ public class CommunityServiceImpl implements CommunityService {
                             ? Message.UserMessageType.USER
                             : Message.UserMessageType.OPPONENT;
 
-                    return new GetMessageListResponse(content, message.getUser().getNickname(), message.getUser().getId(),s3Util.getS3UrlFromS3(message.getUser().getProfileImg()), message.getCreatedAt().toString(), userMessageType);
+                    return new GetMessageListResponse(content, message.getUser().getNickname(), message.getUser().getId(), s3Util.getProfilePresignedUrlFromS3(message.getUser().getProfileImg()), message.getCreatedAt().toString(), userMessageType);
                 })
                 .toList();
 
@@ -306,7 +307,7 @@ public class CommunityServiceImpl implements CommunityService {
                 content,
                 post.getCreatedAt().toString(),
                 commentResponses,
-                s3Util.getS3UrlFromS3(post.getAuthor().getProfileImg())
+                s3Util.getProfilePresignedUrlFromS3(post.getAuthor().getProfileImg())
         );
     }
 
@@ -341,7 +342,7 @@ public class CommunityServiceImpl implements CommunityService {
                             content,
                             post.getCreatedAt().toString(),
                             commentResponses,
-                            s3Util.getS3UrlFromS3(post.getAuthor().getProfileImg())
+                            s3Util.getProfilePresignedUrlFromS3(post.getAuthor().getProfileImg())
                     );
                 })
                 .toList();
@@ -383,7 +384,7 @@ public class CommunityServiceImpl implements CommunityService {
                             content,
                             createdAt,
                             List.of(),
-                            s3Util.getS3UrlFromS3(post.getAuthor().getProfileImg())
+                            s3Util.getProfilePresignedUrlFromS3(post.getAuthor().getProfileImg())
                     );
                 })
                 .sorted(Comparator.comparing(GetPostResponse::createdAt).reversed())
@@ -442,7 +443,7 @@ public class CommunityServiceImpl implements CommunityService {
                 content,
                 post.getCreatedAt().toString(),
                 commentResponses,
-                s3Util.getS3UrlFromS3(post.getAuthor().getProfileImg())
+                s3Util.getProfilePresignedUrlFromS3(post.getAuthor().getProfileImg())
         ),
                 contentImageRepository.findImageUrlsByContent(originalContent));
     }
@@ -462,7 +463,7 @@ public class CommunityServiceImpl implements CommunityService {
                 comment.getAuthor().getId(),
                 content,
                 comment.getCreatedAt().toString(),
-                s3Util.getS3UrlFromS3(comment.getAuthor().getProfileImg())
+                s3Util.getProfilePresignedUrlFromS3(comment.getAuthor().getProfileImg())
         );
     }
 
@@ -494,7 +495,7 @@ public class CommunityServiceImpl implements CommunityService {
                             content,
                             post.getCreatedAt().toString(),
                             commentResponses,
-                            s3Util.getS3UrlFromS3(post.getAuthor().getProfileImg())
+                            s3Util.getProfilePresignedUrlFromS3(post.getAuthor().getProfileImg())
                     );
                 })
                 .sorted(Comparator.comparing(GetPostResponse::createdAt).reversed())
@@ -573,7 +574,7 @@ public class CommunityServiceImpl implements CommunityService {
                             comment.getAuthor().getId(),
                             content,
                             comment.getCreatedAt().toString(),
-                            s3Util.getS3UrlFromS3(comment.getAuthor().getProfileImg())
+                            s3Util.getProfilePresignedUrlFromS3(comment.getAuthor().getProfileImg())
                     );
                 })
                 .toList();
