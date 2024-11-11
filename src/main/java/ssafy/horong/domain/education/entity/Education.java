@@ -1,5 +1,6 @@
 package ssafy.horong.domain.education.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -44,8 +45,10 @@ public class Education {
     private int day;
 
     @OneToMany(mappedBy = "education", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<EducationLanguage> educationLanguages;
 
     @OneToMany(mappedBy = "education", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<EducationRecord> educationRecords;
 }

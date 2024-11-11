@@ -37,4 +37,10 @@ public class EducationController {
     public CommonResponse<?> saveEducationRecord(@ModelAttribute @Validated SaveEduciatonRecordRequest request) {
         return CommonResponse.ok(educationService.saveEducationRecord(request.toCommand()));
     }
+
+    @Operation(summary = "스탬프 날짜 조회", description = "스탬프 날짜를 조회하는 API입니다.")
+    @GetMapping("/stamps")
+    public CommonResponse<?> getStampDates() {
+        return CommonResponse.ok(educationService.getStampDates());
+    }
 }

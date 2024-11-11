@@ -7,6 +7,8 @@ import ssafy.horong.domain.education.entity.EducationStamp;
 import ssafy.horong.domain.member.entity.User;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 public interface EducationStampRepository extends JpaRepository<EducationStamp, Long> {
     @Query("SELECT CASE WHEN COUNT(es) > 0 THEN true ELSE false END " +
@@ -15,4 +17,8 @@ public interface EducationStampRepository extends JpaRepository<EducationStamp, 
     boolean existsByUserIdAndCreatedAtDateOnly(@Param("userId") Long userId, @Param("day") LocalDate day);
 
     int countByUser(User user);
+
+    @Query("SELECT es FROM EducationStamp es WHERE es.user.id = :userId AND MOD(es.id, 10) = 0 " +
+            "ORDER BY es.createdAt DESC")
+    List<EducationStamp> findLatestByUserIdWithIdEndingInZero(@Param("userId") Long userId);
 }

@@ -47,7 +47,7 @@ public class NotificationScheduler {
     private final UserRepository userRepository;
 
     @Transactional
-    @Scheduled(fixedRate = 10000) // 1분마다 실행
+    @Scheduled(fixedRate = 1000000) // 1분마다 실행
     public void notifyUnreadAlerts() {
         List<User> users = userRepository.findAll(); // 모든 사용자 조회
 
