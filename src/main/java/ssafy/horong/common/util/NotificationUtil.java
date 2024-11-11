@@ -64,7 +64,8 @@ public class NotificationUtil {
         }
     }
 
-    public SseEmitter createSseEmitter(Long userId) {
+    public SseEmitter createSseEmitter() {
+        Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
         emitters.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(emitter);
 

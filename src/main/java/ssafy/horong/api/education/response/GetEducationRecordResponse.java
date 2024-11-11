@@ -5,7 +5,7 @@ import ssafy.horong.domain.education.entity.Education;
 import java.util.List;
 
 public record GetEducationRecordResponse(
-        Education word,
+        String word,
         List<EducationRecordResponse> educationRecordList
 ) {
 }
