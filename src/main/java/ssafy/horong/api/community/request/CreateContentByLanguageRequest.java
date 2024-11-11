@@ -3,8 +3,6 @@ package ssafy.horong.api.community.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import ssafy.horong.domain.member.common.Language;
 
-import java.util.List;
-
 public record CreateContentByLanguageRequest(
         @Schema(description = "게시글 제목", example = "게시글 제목입니다.")
         String title,

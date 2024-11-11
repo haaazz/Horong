@@ -1,6 +1,5 @@
 package ssafy.horong.domain.community.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -26,7 +25,6 @@ import ssafy.horong.domain.member.common.MemberRole;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 
-import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;

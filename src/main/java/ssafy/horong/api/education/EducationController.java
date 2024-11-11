@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import ssafy.horong.api.CommonResponse;
 import ssafy.horong.api.education.request.SaveEduciatonRecordRequest;
 import ssafy.horong.api.education.response.TodayWordsResponse;
-import ssafy.horong.api.member.request.UserSignupRequest;
 import ssafy.horong.domain.education.service.EducationService;
 
 @Slf4j
