@@ -9,7 +9,7 @@ import ssafy.horong.api.horongChat.response.ChatContentResponse;
 import ssafy.horong.api.horongChat.response.ChatListResponse;
 import ssafy.horong.api.horongChat.response.ChatRoomResponse;
 import ssafy.horong.common.util.SecurityUtil;
-import ssafy.horong.domain.horongChat.HorongChatRepository;
+import ssafy.horong.domain.horongChat.Repository.HorongChatRepository;
 import ssafy.horong.domain.horongChat.command.SaveChatLogCommand;
 import ssafy.horong.domain.horongChat.entity.HorongChat;
 import ssafy.horong.domain.member.entity.User;
