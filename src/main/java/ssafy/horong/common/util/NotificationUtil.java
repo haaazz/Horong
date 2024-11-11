@@ -3,6 +3,7 @@ package ssafy.horong.common.util;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import ssafy.horong.api.community.response.NotificationResponse;
 import ssafy.horong.domain.community.entity.Notification;
 import ssafy.horong.domain.community.repository.NotificationRepository;
 import ssafy.horong.domain.member.entity.User;
@@ -21,29 +22,29 @@ public class NotificationUtil {
     private final NotificationRepository notificationRepository;
     private final Map<Long, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
-
     public void sendMergedNotifications(User user) {
-        // Fetch unread comment notifications
         List<Notification> unreadCommentNotifications = notificationRepository
                 .findByReceiverAndIsReadFalseAndType(user, Notification.NotificationType.COMMENT);
 
-        // Fetch unread message notifications
         List<Notification> unreadMessageNotifications = notificationRepository
                 .findByReceiverAndIsReadFalseAndType(user, Notification.NotificationType.MESSAGE);
 
-        // Combine both lists into one
         List<Notification> combinedNotifications = new ArrayList<>();
         combinedNotifications.addAll(unreadCommentNotifications);
         combinedNotifications.addAll(unreadMessageNotifications);
 
-
         combinedNotifications.sort(Comparator.comparing(Notification::getCreatedAt).reversed());
-        // Send notifications to the user
-        sendNotificationToUser(combinedNotifications, user.getId());
+
+        // Convert to DTOs
+        List<NotificationResponse> notificationResponse = NotificationResponse.convertToNotificationDTOs(combinedNotifications);
+
+        // Send DTOs instead of entities
+        sendNotificationToUser(notificationResponse, user.getId());
     }
 
 
-    public void sendNotificationToUser(List<Notification> notifications, Long userId) {
+
+    public void sendNotificationToUser(List<NotificationResponse> notifications, Long userId) {
         if (notifications == null || notifications.isEmpty()) {
             return;
         }
@@ -51,7 +52,7 @@ public class NotificationUtil {
         List<SseEmitter> userEmitters = emitters.get(userId);
         if (userEmitters != null) {
             for (SseEmitter emitter : userEmitters) {
-                for (Notification notification : notifications) {
+                for (NotificationResponse notification : notifications) {
                     try {
                         emitter.send(SseEmitter.event()
                                 .name("notification")

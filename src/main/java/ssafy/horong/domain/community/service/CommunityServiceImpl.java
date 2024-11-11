@@ -737,11 +737,14 @@ public class CommunityServiceImpl implements CommunityService {
             // Notification 객체 리스트로 알림 가져오기
             List<Notification> combinedNotifications = getCombinedNotifications(receiver);
 
-            // 사용자에게 알림 전송
-            notificationUtil.sendNotificationToUser(combinedNotifications, receiver.getId());
+            // Notification 객체를 NotificationResponse DTO로 변환
+            List<NotificationResponse> notificationDTOs = NotificationResponse.convertToNotificationDTOs(combinedNotifications);
+
+            // 사용자에게 DTO로 알림 전송
+            notificationUtil.sendNotificationToUser(notificationDTOs, receiver.getId());
 
             // 로그 출력
-            log.info("알림 목록 전송: {}", combinedNotifications);
+            log.info("알림 목록 전송: {}", notificationDTOs);
         }
     }
 
