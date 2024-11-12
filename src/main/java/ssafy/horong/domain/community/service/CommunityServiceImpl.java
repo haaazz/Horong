@@ -218,8 +218,13 @@ public class CommunityServiceImpl implements CommunityService {
         messageRepository.save(message);
 
         User receiver = message.getChatRoom().getOpponent(getCurrentUser());
-        notifyByMessageUser(receiver, "메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content(), Notification.NotificationType.MESSAGE, message);
-        log.info("메시지 전송: {}", receiver.getNickname());
+        if (command.contentsByLanguages() != null) {
+            notifyByMessageUser(receiver, "메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content(), Notification.NotificationType.MESSAGE, message);
+            log.info("메시지 전송: {}", receiver.getNickname());
+        }
+        else {
+            notifyByMessageUser(receiver, "사진이 도착했습니다", Notification.NotificationType.MESSAGE, message);
+        }
     }
 
     @Override
