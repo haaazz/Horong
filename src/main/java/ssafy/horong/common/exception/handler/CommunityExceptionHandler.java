@@ -10,7 +10,7 @@ import ssafy.horong.common.exception.Board.*;
 
 @RestControllerAdvice
 @Slf4j
-public class BoardExceptionHandler {
+public class CommunityExceptionHandler {
 
     @ExceptionHandler(NotAdminExeption.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
@@ -51,6 +51,13 @@ public class BoardExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public CommonResponse handleCommentNotFoundException(CommentNotFoundException e) {
         log.error("CommentNotFoundException", e);
+        return CommonResponse.notFound(e.getErrorCode());
+    }
+
+    @ExceptionHandler(ChatRoomNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public CommonResponse handleChatRoomNotFoundException(ChatRoomNotFoundException e) {
+        log.error("ChatRoomNotFoundException", e);
         return CommonResponse.notFound(e.getErrorCode());
     }
 }

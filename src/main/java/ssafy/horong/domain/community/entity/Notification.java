@@ -19,11 +19,25 @@ public class Notification {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "receiver_id")
+    private User receiver;
 
-    private String message;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sender_id")
+    private User sender;
+
+    private String messageContent;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "post_id")
+    private Post Post;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "message_id")
+    private Message Message;
+
     private boolean isRead;
+
     private LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)

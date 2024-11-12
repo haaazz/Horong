@@ -10,9 +10,10 @@ import ssafy.horong.common.util.NotificationUtil;
 import ssafy.horong.domain.community.entity.Notification;
 import ssafy.horong.domain.community.service.NotificationService;
 
+
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/nocifications")
+@RequestMapping("/notifications")
 public class NotificationController {
 
     private final NotificationService notificationService;
@@ -26,17 +27,11 @@ public class NotificationController {
         return CommonResponse.ok("알림이 읽음 처리되었습니다.", null);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
-    @Operation(summary = "알림 스트림", description = "알림을 스트림으로 전송합다.")
-    @GetMapping("/notifications/stream")
+    @Operation(summary = "알림 스트림", description = "알림을 스트림으로 전송합니다.")
+    @GetMapping("/stream")
     public SseEmitter streamNotifications() {
-        SseEmitter emitter = new SseEmitter(600000L); // 60초 동안 연결 유지
-        notificationUtil.addEmitter(emitter);
-
-        emitter.onCompletion(() -> notificationUtil.removeEmitter(emitter));
-        emitter.onTimeout(() -> notificationUtil.removeEmitter(emitter));
-        emitter.onError((e) -> notificationUtil.removeEmitter(emitter));
-
-        return emitter;
+        System.out.println("streamNotifications 메서드 호출됨 - 호출 원인 확인 필요");
+        return notificationUtil.createSseEmitter();
     }
+
 }

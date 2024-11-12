@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import ssafy.horong.api.CommonResponse;
 import ssafy.horong.api.education.request.SaveEduciatonRecordRequest;
 import ssafy.horong.api.education.response.TodayWordsResponse;
-import ssafy.horong.api.member.request.UserSignupRequest;
 import ssafy.horong.domain.education.service.EducationService;
 
 @Slf4j
@@ -36,5 +35,17 @@ public class EducationController {
     @PostMapping(value = "/record", consumes = { "multipart/form-data" })
     public CommonResponse<?> saveEducationRecord(@ModelAttribute @Validated SaveEduciatonRecordRequest request) {
         return CommonResponse.ok(educationService.saveEducationRecord(request.toCommand()));
+    }
+
+    @Operation(summary = "스탬프 날짜 조회", description = "스탬프 날짜를 조회하는 API입니다.")
+    @GetMapping("/stamps")
+    public CommonResponse<?> getStampDates() {
+        return CommonResponse.ok(educationService.getStampDates());
+    }
+
+    @Operation(summary = "한국어 학습 기록 세부 조회", description = "한국어 학습 기록 세부를 조회하는 API입니다.")
+    @GetMapping("/record/{recordId}")
+    public CommonResponse<?> getEducationRecordDetail(@PathVariable Long recordId) {
+        return CommonResponse.ok(educationService.getEducationRecordDetail(recordId));
     }
 }

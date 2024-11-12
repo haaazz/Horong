@@ -12,9 +12,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Message {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -23,17 +21,17 @@ public class Message {
     private List<ContentByLanguage> contentByCountries;
 
     @ManyToOne
-    @JoinColumn(name = "sender_id", nullable = false)
-    private User sender;
-
-    @ManyToOne
-    @JoinColumn(name = "receiver_id", nullable = false)
-    private User receiver;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     private boolean isRead;
+
+    @ManyToOne
+    @JoinColumn(name = "chat_room_id")
+    private ChatRoom chatRoom;
 
     @PrePersist
     protected void onCreate() {
@@ -43,5 +41,17 @@ public class Message {
 
     public void readMessage() {
         this.isRead = true;
+    }
+
+    public enum UserMessageType {
+        USER, OPPONENT
+    }
+
+    // Builder 패턴을 위한 Builder 내부 클래스 정의
+    @Builder
+    public Message(List<ContentByLanguage> contentByCountries, User user, ChatRoom chatRoom) {
+        this.contentByCountries = contentByCountries;
+        this.user = user;
+        this.chatRoom = chatRoom;
     }
 }

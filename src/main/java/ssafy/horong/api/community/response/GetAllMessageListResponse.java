@@ -2,7 +2,12 @@ package ssafy.horong.api.community.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.net.URI;
+
 public record GetAllMessageListResponse(
+        @Schema(description = "방id", example = "1")
+        Long roomId,
+
         @Schema(description = "메시지 수", example = "1")
         Long messageCount,
 
@@ -15,10 +20,16 @@ public record GetAllMessageListResponse(
         @Schema(description = "전송자 id", example = "1")
         Long senderId,
 
+        @Schema(description = "전송자 프로필 이미지", example = "https://horong.s3.ap-northeast-2.amazonaws.com/profile/1.jpg")
+        String profileImage,
+
         @Schema(description = "마지막 전송 시간", example = "2021-07-01T00:00:00")
-        String createdAt
+        String createdAt,
+
+        @Schema(description = "게시글 id", example = "1")
+        Long postId
 ) {
-    public GetAllMessageListResponse of(Long messageCount, String content, String senderNickname, Long senderId, String createdAt) {
-        return new GetAllMessageListResponse(messageCount, content, senderNickname, senderId, createdAt);
+    public static GetAllMessageListResponse of(Long roomId ,Long messageCount, String content, String senderNickname, Long senderId, String profileImage, String createdAt, Long postId) {
+        return new GetAllMessageListResponse(roomId ,messageCount, content, senderNickname, senderId, profileImage, createdAt, postId);
     }
 }

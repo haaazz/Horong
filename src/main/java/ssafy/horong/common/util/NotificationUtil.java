@@ -3,71 +3,133 @@ package ssafy.horong.common.util;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import ssafy.horong.api.community.response.NotificationResponse;
 import ssafy.horong.domain.community.entity.Notification;
 import ssafy.horong.domain.community.repository.NotificationRepository;
 import ssafy.horong.domain.member.entity.User;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
 @RequiredArgsConstructor
 public class NotificationUtil {
 
     private final NotificationRepository notificationRepository;
-    private final List<SseEmitter> emitters = new ArrayList<>(); // SseEmitter 리스트 추가
+    private final Map<Long, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
     public void sendMergedNotifications(User user) {
-        // 읽지 않은 댓글과 메시지를 각각 리스트로 가져옴
-        List<Notification> unreadCommentNotifications = notificationRepository.findByUserAndIsReadFalseAndType(user, Notification.NotificationType.COMMENT);
-        List<Notification> unreadMessageNotifications = notificationRepository.findByUserAndIsReadFalseAndType(user, Notification.NotificationType.MESSAGE);
+        List<Notification> unreadCommentNotifications = notificationRepository
+                .findByReceiverAndIsReadFalseAndType(user, Notification.NotificationType.COMMENT);
 
-        // 각각의 알림 메시지를 문자열 리스트로 변환
-        List<String> unreadComments = unreadCommentNotifications.stream()
-                .map(Notification::getMessage)
-                .toList();
+        List<Notification> unreadMessageNotifications = notificationRepository
+                .findByReceiverAndIsReadFalseAndType(user, Notification.NotificationType.MESSAGE);
 
-        List<String> unreadMessages = unreadMessageNotifications.stream()
-                .map(Notification::getMessage)
-                .toList();
+        List<Notification> combinedNotifications = new ArrayList<>();
+        combinedNotifications.addAll(unreadCommentNotifications);
+        combinedNotifications.addAll(unreadMessageNotifications);
 
-        // 두 리스트를 병합하여 하나의 리스트로 만듦
-        List<String> combinedNotifications = Stream.concat(unreadComments.stream(), unreadMessages.stream())
-                .collect(Collectors.toList());
+        combinedNotifications.sort(Comparator.comparing(Notification::getCreatedAt).reversed());
 
-        // 병합된 리스트를 전송
-        sendNotificationToUser(combinedNotifications, user.getId());
+        // Convert to DTOs
+        List<NotificationResponse> notificationResponse = NotificationResponse.convertToNotificationDTOs(combinedNotifications, user.getLanguage());
+
+        // Send DTOs instead of entities
+        sendNotificationToUser(notificationResponse, user.getId());
     }
 
-    public void sendNotificationToUser(List<String> messages, Long userId) {
-        if (messages == null || messages.isEmpty()) {
+
+
+    public void sendNotificationToUser(List<NotificationResponse> notifications, Long userId) {
+        if (notifications == null || notifications.isEmpty()) {
             return;
         }
 
-        // 메시지를 하나의 문자열로 합침
-        String combinedMessage = String.join("\n", messages);
-
-        List<SseEmitter> deadEmitters = new ArrayList<>();
-        emitters.forEach(emitter -> {
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("notification")
-                        .data("User ID: " + userId + " - " + combinedMessage));
-            } catch (IOException e) {
-                deadEmitters.add(emitter);
+        List<SseEmitter> userEmitters = emitters.get(userId);
+        if (userEmitters != null) {
+            for (SseEmitter emitter : userEmitters) {
+                for (NotificationResponse notification : notifications) {
+                    try {
+                        emitter.send(SseEmitter.event()
+                                .name("notification")
+                                .data(notification));
+                    } catch (IOException e) {
+                        removeEmitter(userId, emitter);
+                    }
+                }
             }
-        });
-        emitters.removeAll(deadEmitters);
+        }
     }
 
-    public void addEmitter(SseEmitter emitter) {
-        emitters.add(emitter);
+    public SseEmitter createSseEmitter() {
+        Long userId = SecurityUtil.getLoginMemberId().orElseThrow();
+        SseEmitter emitter = new SseEmitter(600000L); // 10분 타임아웃
+
+        // 해당 userId의 리스트를 초기화하고 emitter 추가
+        emitters.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(emitter);
+
+        emitter.onCompletion(() -> removeEmitter(userId, emitter));
+        emitter.onTimeout(() -> removeEmitter(userId, emitter));
+        emitter.onError(e -> removeEmitter(userId, emitter));
+
+        try {
+            emitter.send(SseEmitter.event()
+                    .name("connect")
+                    .data("connected"));
+        } catch (IOException e) {
+            removeEmitter(userId, emitter);
+            throw new RuntimeException(e);
+        }
+
+        // 일정 시간마다 더미 이벤트 전송
+        Timer timer = new Timer(true);
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    emitter.send(SseEmitter.event()
+                            .name("keepAlive")
+                            .data("keep connection alive"));
+                } catch (IOException e) {
+                    removeEmitter(userId, emitter);
+                    timer.cancel(); // 연결이 끊어지면 타이머 중단
+                }
+            }
+        }, 0, 10000); // 5초 간격으로 더미 이벤트 전송
+
+        return emitter;
     }
 
-    public void removeEmitter(SseEmitter emitter) {
-        emitters.remove(emitter);
+    public void removeEmitter(Long userId, SseEmitter emitter) {
+        List<SseEmitter> userEmitters = emitters.get(userId);
+        if (userEmitters != null) {
+            userEmitters.remove(emitter);
+            if (userEmitters.isEmpty()) {
+                emitters.remove(userId);
+            }
+        }
+    }
+
+    private void startKeepAlive(SseEmitter emitter, Long userId) {
+        Timer timer = new Timer(true);
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    emitter.send(SseEmitter.event()
+                            .name("keepAlive")
+                            .data("keep connection alive"));
+                } catch (IOException e) {
+                    removeEmitter(userId, emitter);
+                    timer.cancel();
+                }
+            }
+        }, 0, 5000);
+    }
+
+    public Map<Long, List<SseEmitter>> getEmitters() {
+        return emitters;
     }
 }

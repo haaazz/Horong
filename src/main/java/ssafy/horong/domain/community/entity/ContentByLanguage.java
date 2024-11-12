@@ -34,7 +34,7 @@ public class ContentByLanguage {
     @Enumerated(EnumType.STRING)
     private Language language;
 
-    @Column(length = 1000, nullable = false)
+    @Column(length = 1000)
     private String content;
 
     @Enumerated(EnumType.STRING)

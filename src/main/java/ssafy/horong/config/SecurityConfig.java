@@ -19,6 +19,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import ssafy.horong.common.exception.handler.CustomAccessDeniedHandler;
 import ssafy.horong.common.exception.handler.CustomAuthenticationEntryPoint;
 import ssafy.horong.common.properties.CorsProperties;
+import ssafy.horong.config.filter.CacheControlFilter;
 import ssafy.horong.config.filter.JwtAuthenticationFilter;
 
 import static ssafy.horong.common.constant.security.AUTHENTICATED_PATH.AUTHENTICATED_ONLY;
@@ -48,12 +49,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(AUTHENTICATED_ONLY).authenticated()
                         .anyRequest().permitAll())
-                .addFilterBefore(jwtAuthenticationFilter, BasicAuthenticationFilter.class)
+                .addFilterAt(jwtAuthenticationFilter, BasicAuthenticationFilter.class) // addFilterAt으로 위치 지정
+                .addFilterBefore(new CacheControlFilter(), JwtAuthenticationFilter.class) // CacheControlFilter 추가
                 .exceptionHandling(exceptionHandling ->
-                        exceptionHandling.accessDeniedHandler(customAccessDeniedHandler) // 권한이 없을 때 처리
-                                .authenticationEntryPoint(customAuthenticationEntryPoint)) // 인증되지 않았을 때 처리
+                        exceptionHandling.accessDeniedHandler(customAccessDeniedHandler)
+                                .authenticationEntryPoint(customAuthenticationEntryPoint))
                 .build();
     }
+
 
     private CorsConfigurationSource corsConfig() {
         log.debug(">>> [SecurityConfig::configurationSource] CorsConfigurationSource CORS 설정이 filterchain에 등록");
@@ -62,6 +65,9 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(corsProperties.allowedOrigins());
         configuration.setAllowedMethods(corsProperties.allowedMethods());
         configuration.setAllowedHeaders(corsProperties.allowedHeaders());
+
+        configuration.addAllowedHeader("cache-control");
+        
         configuration.setAllowCredentials(corsProperties.allowedCredentials());
         configuration.setExposedHeaders(corsProperties.exposedHeaders());
         configuration.setMaxAge(corsProperties.oneHour());

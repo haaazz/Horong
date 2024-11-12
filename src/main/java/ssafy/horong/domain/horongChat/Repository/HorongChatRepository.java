@@ -1,4 +1,4 @@
-package ssafy.horong.domain.horongChat;
+package ssafy.horong.domain.horongChat.Repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import ssafy.horong.domain.horongChat.entity.HorongChat;

@@ -16,7 +16,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.UnsupportedMediaTypeException;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import ssafy.horong.api.CommonResponse;
@@ -27,7 +26,6 @@ import ssafy.horong.common.properties.WebClientProperties;
 import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.config.SecurityConfig;
-import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 
 import javax.sql.DataSource;

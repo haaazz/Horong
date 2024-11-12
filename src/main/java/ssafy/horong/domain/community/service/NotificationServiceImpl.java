@@ -12,8 +12,6 @@ import ssafy.horong.domain.community.repository.NotificationRepository;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 
-import java.util.List;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -32,7 +30,7 @@ public class NotificationServiceImpl implements NotificationService {
         notificationRepository.save(notification);
 
         User user = getCurrentUser();
-        notificationUtil.sendMergedNotifications(user); // NotificationUtil을 사용하여 알림 전송
+        notificationUtil.sendMergedNotifications(user);
     }
 
     private User getCurrentUser() {

@@ -12,15 +12,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import ssafy.horong.api.CommonResponse;
 import ssafy.horong.api.community.request.*;
-import ssafy.horong.api.community.response.GetAllMessageListResponse;
-import ssafy.horong.api.community.response.GetCommentResponse;
-import ssafy.horong.api.community.response.GetMessageListResponse;
-import ssafy.horong.api.community.response.GetPostResponse;
+import ssafy.horong.api.community.response.*;
 import ssafy.horong.api.health.TestRequest;
 import ssafy.horong.domain.community.entity.BoardType;
+import ssafy.horong.domain.community.entity.ChatRoom;
+import ssafy.horong.domain.community.repository.ChatRoomRepository;
 import ssafy.horong.domain.community.service.CommunityService;
 
 import java.util.List;
@@ -33,6 +31,7 @@ import java.util.Map;
 @Tag(name = "community", description = "커뮤니티")
 public class CommunityController {
     private final CommunityService communityService;
+    private final ChatRoomRepository chatRoomRepository;
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 생성", description = """
@@ -133,12 +132,12 @@ public class CommunityController {
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "메시지 리스트 조회", description = "메시지 리스트를 조회하는 API입니다.")
-    @GetMapping("/messages/{senderId}")
-    public CommonResponse<List<GetMessageListResponse>> getMessageList(@PathVariable Long senderId) {
-        log.info("[CommunityController] 메시지 리스트 조회 >>>> senderId: {}", senderId);
-        GetMessageListRequest request = new GetMessageListRequest(senderId);
-        List<GetMessageListResponse> response = communityService.getMessageList(request.toCommand());
-        return CommonResponse.ok(response);
+    @GetMapping("/messages/{chatroomId}")
+    public CommonResponse<GetPostIdAndMessageListResponse> getMessageList(@PathVariable Long chatroomId) {
+        log.info("[CommunityController] 메시지 리스트 조회 >>>> senderId: {}", chatroomId);
+        GetMessageListRequest request = new GetMessageListRequest(chatroomId);
+        GetPostIdAndMessageListResponse messageList = communityService.getMessageList(request.toCommand());
+        return CommonResponse.ok(messageList);
     }
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
@@ -171,9 +170,9 @@ public class CommunityController {
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 원본 조회", description = "게시글의 원본을 조회하는 API입니다.")
     @GetMapping("/original/post/{postId}")
-    public CommonResponse<GetPostResponse> getOriginalPost(@PathVariable Long postId) {
+    public CommonResponse<GetOriginPostResponse> getOriginalPost(@PathVariable Long postId) {
         log.info("[CommunityController] 게시글 원본 조회 >>>> postId: {}", postId);
-        GetPostResponse response = communityService.getOriginalPost(postId);
+        GetOriginPostResponse response = communityService.getOriginalPost(postId);
         return CommonResponse.ok(response);
     }
 
@@ -183,6 +182,28 @@ public class CommunityController {
     public CommonResponse<GetCommentResponse> getOriginalComment(@PathVariable Long commentId) {
         log.info("[CommunityController] 댓글 원본 조회 >>>> commentId: {}", commentId);
         GetCommentResponse response = communityService.getOriginalComment(commentId);
+        return CommonResponse.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "채팅룸 생성", description = "채팅룸을 생성하는 API입니다.")
+    @PostMapping("/chatroom")
+    public CommonResponse<Long> createChatRoom(
+            @RequestParam Long postId,
+            @RequestParam Long userId) {
+        log.info("[CommunityController] 채팅룸 생성 >>>> request: {}, {}", postId, userId);
+        ChatRoom response = communityService.createChatRoom(userId, postId);
+        return CommonResponse.ok(response.getId());
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "채팅방 존재 여부 확인", description = "채팅방이 존재하는지 확인하는 API입니다.")
+    @GetMapping("/chatroom/check")
+    public CommonResponse<Long> checkChatRoom(
+            @RequestParam Long postId,
+            @RequestParam Long userId) {
+        log.info("[CommunityController] 채팅방 존재 여부 확인 >>>> request: {}, {}", postId, userId);
+        Long response = chatRoomRepository.findChatRoomIdByUserAndPost(userId, postId).orElse(-1L);
         return CommonResponse.ok(response);
     }
 }
