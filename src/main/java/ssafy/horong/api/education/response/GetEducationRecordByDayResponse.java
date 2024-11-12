@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record GetEducationRecordByDayResponse(
-        List<GetEducationRecordByWordResponse> educationRecordList,
-        LocalDate date
+        LocalDate date,
+        List<GetEducationRecordByWordResponse> educationRecordList
 ) {
 }
