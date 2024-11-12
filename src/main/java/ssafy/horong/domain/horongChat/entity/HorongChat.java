@@ -27,7 +27,7 @@ public class HorongChat {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 10000)
     private String content;
 
     @Column(nullable = false)
