@@ -94,6 +94,7 @@ public class EducationServiceImpl implements EducationService {
         for (EducationRecord record : educationRecords) {
             EducationRecordResponse recordResponse = new EducationRecordResponse(
                     record.getId(),
+                    record.getText(),
                     record.getCer(),
                     record.getGtIdx(),
                     record.getHypIdx(),
@@ -167,6 +168,7 @@ public class EducationServiceImpl implements EducationService {
 
         log.info("byteResponse: {}", response);
 
+        educationRecord.setText(response.text());
         educationRecord.setCer(response.cer());
         educationRecord.setGtIdx(response.gtIdx());
         educationRecord.setHypIdx(response.hypIdx());
@@ -221,6 +223,7 @@ public class EducationServiceImpl implements EducationService {
         // EducationRecordResponse 생성 및 반환
         return new EducationRecordResponse(
                 educationRecord.getId(),
+                response.text(),
                 response.cer(),
                 response.gtIdx(),
                 response.hypIdx(),
@@ -289,6 +292,7 @@ public class EducationServiceImpl implements EducationService {
 
         return new EducationRecordResponse(
                 educationRecord.getId(),
+                educationRecord.getText(),
                 educationRecord.getCer(),
                 educationRecord.getGtIdx(),
                 educationRecord.getHypIdx(),

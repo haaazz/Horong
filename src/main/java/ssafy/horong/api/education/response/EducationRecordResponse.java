@@ -9,6 +9,9 @@ public record EducationRecordResponse(
         @Schema(description = "교육 기록의 고유 식별자", example = "1")
         Long id,
 
+        @Schema(description = "사용자가 말한 텍스트", example = "안녕하세요")
+        String text,
+
         @Schema(description = "인증 점수 (백분율)", example = "100")
         float cer,
 

@@ -29,6 +29,9 @@ public class EducationRecord {
     private Education education; // 교육 자료와 연관된 단어
 
     @Column(nullable = false)
+    private String text; // 사용자가 말한 텍스트
+
+    @Column(nullable = false)
     private float cer; // 인증 점수
 
     @Column(nullable = false)
