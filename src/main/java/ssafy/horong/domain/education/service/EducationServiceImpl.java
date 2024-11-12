@@ -294,45 +294,6 @@ public class EducationServiceImpl implements EducationService {
                 .toList();
     }
 
-    public EducationDay getOrCreateTodayEducationDay(User currentUser) {
-        // 전체 EducationDay 리스트를 사용자 기준으로 조회, 생성일자 역순으로 정렬
-        List<EducationDay> educationDays = educationDayRepository.findAllByUserOrderByCreatedAtDesc(currentUser);
-
-        if (!educationDays.isEmpty()) {
-            EducationDay lastEducationDay = educationDays.get(0);
-
-            // 가장 최근 기록이 오늘이라면 해당 객체를 반환
-            if (lastEducationDay.getCreatedAt().toLocalDate().isEqual(LocalDate.now())) {
-                return lastEducationDay;
-            }
-
-            // 최근 기록이 오늘이 아닐 경우, 가장 최근의 day 값에 +1
-            int newDayValue = lastEducationDay.getDay() + 1;
-
-            // 새로운 EducationDay 객체 생성
-            EducationDay newEducationDay = EducationDay.builder()
-                    .user(currentUser)
-                    .wordIds(new ArrayList<>()) // 빈 단어 목록으로 초기화
-                    .day(newDayValue)
-                    .createdAt(LocalDateTime.now())
-                    .build();
-
-            // 생성한 객체를 저장 후 반환
-            return educationDayRepository.save(newEducationDay);
-        } else {
-            // 조회된 기록이 없다면 첫 번째 day 값으로 초기화
-            EducationDay newEducationDay = EducationDay.builder()
-                    .user(currentUser)
-                    .wordIds(new ArrayList<>()) // 빈 단어 목록으로 초기화
-                    .day(1) // 첫 번째 day 값으로 설정
-                    .createdAt(LocalDateTime.now())
-                    .build();
-
-            // 생성한 객체를 저장 후 반환
-            return educationDayRepository.save(newEducationDay);
-        }
-    }
-
     public EducationRecordResponse getEducationRecordDetail(Long recordId) {
         EducationRecord educationRecord = educationRecordRepository.findById(recordId).orElseThrow();
 

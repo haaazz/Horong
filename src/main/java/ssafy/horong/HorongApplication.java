@@ -29,7 +29,7 @@ public class HorongApplication {
     }
 
     @PostConstruct
-    void started(){
+    public void init() {
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
     }
 }
