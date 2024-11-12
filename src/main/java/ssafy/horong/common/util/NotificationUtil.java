@@ -97,7 +97,7 @@ public class NotificationUtil {
                     timer.cancel(); // 연결이 끊어지면 타이머 중단
                 }
             }
-        }, 0, 10000000); // 5초 간격으로 더미 이벤트 전송
+        }, 0, 10000); // 5초 간격으로 더미 이벤트 전송
 
         return emitter;
     }
