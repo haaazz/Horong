@@ -194,9 +194,10 @@ public class CommunityServiceImpl implements CommunityService {
     public void sendMessage(SendMessageCommand command) {
         List<ContentImage> contentImages = extractMessageContentImages(command.contentImageRequest());
 
-        List<ContentByLanguage> contentByCountries = new ArrayList<>(); // 빈 리스트로 초기화
+        List<ContentByLanguage> contentByCountries = new ArrayList<>();
 
         if (command.contentsByLanguages() != null) {
+            // contentsByLanguages가 null이 아닌 경우에만 언어별 내용 설정
             contentByCountries = command.contentsByLanguages().stream()
                     .map(contentByLanguageCommand -> {
                         ContentByLanguage contentEntity = ContentByLanguage.builder()
@@ -210,17 +211,30 @@ public class CommunityServiceImpl implements CommunityService {
                         return contentEntity;
                     })
                     .toList();
+        } else {
+            // contentsByLanguages가 null인 경우, 빈 language와 content로 ContentByLanguage 생성
+            ContentByLanguage contentEntity = ContentByLanguage.builder()
+                    .language(null)
+                    .content(null)
+                    .contentImages(contentImages)
+                    .build();
+
+            contentImages.forEach(contentImage -> contentImage.setContent(contentEntity));
+            contentByCountries.add(contentEntity);
         }
 
+        // 메시지 객체 생성 및 저장
         Message message = Message.builder()
                 .chatRoom(chatRoomRepository.findById(command.chatRoomId()).orElseThrow(ChatRoomNotFoundException::new))
                 .contentByCountries(contentByCountries)
                 .user(getCurrentUser())
                 .build();
 
+        // 각 contentByCountries에 message 설정
         contentByCountries.forEach(contentByLanguage -> contentByLanguage.setMessage(message));
         messageRepository.save(message);
 
+        // 수신자에게 알림 전송
         User receiver = message.getChatRoom().getOpponent(getCurrentUser());
         if (command.contentsByLanguages() != null) {
             notifyByMessageUser(receiver, "메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content(), Notification.NotificationType.MESSAGE, message);
@@ -229,6 +243,7 @@ public class CommunityServiceImpl implements CommunityService {
             notifyByMessageUser(receiver, "사진이 도착했습니다", Notification.NotificationType.MESSAGE, message);
         }
     }
+
 
     @Override
     public List<GetAllMessageListResponse> getAllMessageList() {
@@ -266,12 +281,22 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     public GetPostIdAndMessageListResponse getMessageList(GetMessageListCommand command) {
         List<Message> messages = messageRepository.findAllByChatRoomId(command.roomId());
-        Long postId= chatRoomRepository.findPostIdByChatRoomId(command.roomId());
+        Long postId = chatRoomRepository.findPostIdByChatRoomId(command.roomId());
         Language userLanguage = getCurrentUser().getLanguage();
+
         List<GetMessageListResponse> messageList = messages.stream()
                 .map(message -> {
+                    // 사용자의 언어에 맞는 메시지 내용 추출
                     String content = getContentByLanguage(message.getContentByCountries(), userLanguage);
 
+                    // 메시지에 첨부된 첫 번째 이미지 URL 가져오기
+                    String imageUrl = message.getContentByCountries().stream()
+                            .flatMap(contentByLanguage -> contentByLanguage.getContentImages().stream())
+                            .findFirst()
+                            .map(contentImage -> s3Util.getPresignedUrlFromS3(contentImage.getImageUrl()))
+                            .orElse(null); // 이미지가 없을 경우 null
+
+                    // 메시지 읽음 처리
                     if (!message.getUser().getId().equals(getCurrentUser().getId())) {
                         message.readMessage();
                         messageRepository.save(message);
@@ -281,12 +306,13 @@ public class CommunityServiceImpl implements CommunityService {
                             ? Message.UserMessageType.USER
                             : Message.UserMessageType.OPPONENT;
 
-                    return new GetMessageListResponse(content, message.getUser().getNickname(), message.getUser().getId(), s3Util.getProfilePresignedUrlFromS3(message.getUser().getProfileImg()), message.getCreatedAt().toString(), userMessageType);
+                    return new GetMessageListResponse(content, imageUrl, message.getUser().getNickname(), message.getUser().getId(), s3Util.getProfilePresignedUrlFromS3(message.getUser().getProfileImg()), message.getCreatedAt().toString(), userMessageType);
                 })
                 .toList();
 
         return GetPostIdAndMessageListResponse.of(postId, messageList);
     }
+
 
     @Override
     public GetPostResponse getPostById(Long id) {
