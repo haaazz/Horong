@@ -196,7 +196,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         List<ContentByLanguage> contentByCountries = null;
 
-        if (command.contentsByLanguages() == null) {
+        if (command.contentsByLanguages() != null) {
             contentByCountries = command.contentsByLanguages().stream()
                     .map(contentByLanguageCommand -> {
                         ContentByLanguage contentEntity = ContentByLanguage.builder()
