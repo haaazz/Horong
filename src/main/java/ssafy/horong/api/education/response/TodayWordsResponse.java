@@ -6,7 +6,7 @@ import ssafy.horong.domain.education.entity.EducationLanguage;
 import java.util.List;
 
 public record TodayWordsResponse(
-        List<Education> words,
+        List<TodayEducationDetailResponse> words,
         List<EducationLanguage> translatedWords
 ) {
 }
