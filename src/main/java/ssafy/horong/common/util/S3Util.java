@@ -59,7 +59,14 @@ public class S3Util {
     public String uploadToS3(MultipartFile imageFile, String fileName, String location) {
         String s3FileName = getS3FileName(imageFile, fileName, location); // S3에 업로드할 파일명 생성
         try (InputStream inputStream = imageFile.getInputStream()) { // try-with-resources 사용
-            amazonS3Client.putObject(new PutObjectRequest(s3Properties.s3().bucket(), s3FileName, inputStream, null));
+            PutObjectRequest putObjectRequest = new PutObjectRequest(s3Properties.s3().bucket(), s3FileName, inputStream, null);
+
+            // 스트림의 최대 읽기 한도 설정 (예: 10MB)
+            putObjectRequest.getRequestClientOptions().setReadLimit(10 * 1024 * 1024); // 10MB
+
+            // S3에 파일 업로드
+            amazonS3Client.putObject(putObjectRequest);
+
             return s3FileName; // 객체 키만 반환
         } catch (IOException e) {
             log.error("S3 업로드 실패: {}", e.getMessage());
@@ -144,14 +151,47 @@ public class S3Util {
         }
     }
 
-    public URI getS3UrlFromS3(String imagePath) {
-        // imagePath에서 S3 객체 키 추출
-        String objectKey = extractObjectKey(imagePath);
-        log.info(objectKey);
+//    public URI getS3UrlFromS3(String objectKey) {
+//        // S3 버킷의 기본 URL을 앞에 붙여서 URI 객체로 반환합니다.
+//        String baseUrl = "https://horong-service.s3.ap-northeast-2.amazonaws.com/";
+//        String fullUrl = baseUrl + objectKey;
+//
+//        log.info("생성된 S3 URI: {}", fullUrl);
+//
+//        // String을 URI로 변환하여 반환
+//        return URI.create(fullUrl);
+//    }
 
-        // S3 URL 생성
-        // S3에서 객체를 가져오기 위해 버킷 이름과 객체 키가 필요합니다.
-        return amazonS3Client.getObject(s3Properties.s3().bucket(), objectKey).getObjectContent().getHttpRequest().getURI(); // 추출한 키를 사용해 URL 생성
+    public URI getS3UrlFromS3(String imagePath) {
+        try {
+            // imagePath에서 S3 객체 키 추출
+            String objectKey = extractObjectKey(imagePath);
+            log.info("Presigned URL을 생성할 객체 키: {}", objectKey);
+
+            // GetObjectRequest 생성
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(s3Properties.s3().bucket())
+                    .key(objectKey)
+                    .build();
+
+            // Presigned URL 요청 생성 (유효 기간 10분 설정)
+            GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
+                    .getObjectRequest(getObjectRequest)
+                    .signatureDuration(Duration.ofMinutes(10))  // Presigned URL의 유효 기간 설정
+                    .build();
+
+            // Presigned URL 생성
+            PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(getObjectPresignRequest);
+            URL presignedUrl = presignedRequest.url();
+
+            log.info("생성된 Presigned URL: {}", presignedUrl.toString());
+
+            // URL을 URI로 변환하여 반환
+            return presignedUrl.toURI();
+        } catch (Exception e) {
+            log.error("Presigned URL 생성 중 오류 발생: {}", e.getMessage());
+            throw new PresignedUrlGenerationFailException();
+        }
     }
 
     private String extractObjectKey(String imagePath) {
