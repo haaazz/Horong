@@ -22,6 +22,7 @@ import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -83,45 +84,65 @@ public class EducationServiceImpl implements EducationService {
         return new TodayWordsResponse(wordDetails, translatedWords);
     }
 
-
     public GetAllEducationRecordResponse getAllEducationRecord() {
+        // 시작 시간 기록
+        long startTime = System.currentTimeMillis();
+        System.out.println("메서드 시작 시간: " + startTime);
+
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
+
+        // 유저 ID로 교육 기록을 조회하는 시간 기록
+        long fetchStartTime = System.currentTimeMillis();
         List<EducationRecord> educationRecords = educationRecordRepository.findByUserId(userId);
+        long fetchEndTime = System.currentTimeMillis();
+        System.out.println("교육 기록 조회 시간: " + (fetchEndTime - fetchStartTime) + "ms");
 
-        // LocalDate와 word별로 그룹화
-        Map<LocalDate, Map<String, List<EducationRecordResponse>>> groupedByDateAndWord = new HashMap<>();
+        // LocalDate와 word별로 그룹화 (ConcurrentHashMap 사용)
+        Map<LocalDate, Map<String, List<EducationRecordResponse>>> groupedByDateAndWord = new ConcurrentHashMap<>();
 
-        for (EducationRecord record : educationRecords) {
+        // 병렬 스트림을 사용하여 데이터 처리 시작 시간 기록
+        long processStartTime = System.currentTimeMillis();
+        educationRecords.parallelStream().forEach(record -> {
             EducationRecordResponse recordResponse = new EducationRecordResponse(
                     record.getId(),
                     record.getText(),
                     record.getCer(),
                     record.getGtIdx(),
                     record.getHypIdx(),
-                    s3Util.getS3UrlFromS3(record.getAudio())
+                    s3Util.getS3UrlFromS3(record.getAudio())  // S3 URL 캐싱 고려 가능
             );
 
-            // 날짜별로 그룹화
+            // 날짜별로 그룹화 (병렬 처리에 안전한 ConcurrentHashMap 사용)
             groupedByDateAndWord
-                    .computeIfAbsent(record.getDate(), date -> new HashMap<>())
-                    .computeIfAbsent(record.getEducation().getWord(), word -> new ArrayList<>())
+                    .computeIfAbsent(record.getDate(), date -> new ConcurrentHashMap<>())
+                    .computeIfAbsent(record.getEducation().getWord(), word -> Collections.synchronizedList(new ArrayList<>()))
                     .add(recordResponse);
-        }
+        });
+        long processEndTime = System.currentTimeMillis();
+        System.out.println("데이터 처리 및 그룹화 시간: " + (processEndTime - processStartTime) + "ms");
 
-        // Map을 List<GetEducationRecordByDayResponse>로 변환
-        List<GetEducationRecordByDayResponse> dayResponses = groupedByDateAndWord.entrySet().stream()
+        // Map을 List<GetEducationRecordByDayResponse>로 변환 (병렬 스트림 사용)
+        long conversionStartTime = System.currentTimeMillis();
+        List<GetEducationRecordByDayResponse> dayResponses = groupedByDateAndWord.entrySet().parallelStream()
                 .map(dateEntry -> {
                     LocalDate date = dateEntry.getKey();
-                    List<GetEducationRecordByWordResponse> wordResponses = dateEntry.getValue().entrySet().stream()
+                    List<GetEducationRecordByWordResponse> wordResponses = dateEntry.getValue().entrySet().parallelStream()
                             .map(wordEntry -> new GetEducationRecordByWordResponse(wordEntry.getValue(), wordEntry.getKey()))
                             .collect(Collectors.toList());
                     return new GetEducationRecordByDayResponse(wordResponses, date);
                 })
                 .collect(Collectors.toList());
+        long conversionEndTime = System.currentTimeMillis();
+        System.out.println("응답 변환 시간: " + (conversionEndTime - conversionStartTime) + "ms");
 
-        // 변환된 리스트를 사용하여 최종 응답 생성
+        // 최종 응답 생성 시간 기록
+        long endTime = System.currentTimeMillis();
+        System.out.println("메서드 종료 시간: " + endTime);
+        System.out.println("전체 수행 시간: " + (endTime - startTime) + "ms");
+
         return new GetAllEducationRecordResponse(dayResponses);
     }
+
 
     @Transactional
     public EducationRecordResponse saveEducationRecord(SaveEduciatonRecordCommand command) {
