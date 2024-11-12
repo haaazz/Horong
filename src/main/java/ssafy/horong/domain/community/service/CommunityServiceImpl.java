@@ -194,19 +194,23 @@ public class CommunityServiceImpl implements CommunityService {
     public void sendMessage(SendMessageCommand command) {
         List<ContentImage> contentImages = extractMessageContentImages(command.contentImageRequest());
 
-        List<ContentByLanguage> contentByCountries = command.contentsByLanguages().stream()
-                .map(contentByLanguageCommand -> {
-                    ContentByLanguage contentEntity = ContentByLanguage.builder()
-                            .language(Optional.ofNullable(contentByLanguageCommand.language()).orElse(null))
-                            .content(contentByLanguageCommand.content())
-                            .contentImages(contentImages)
-                            .build();
+        List<ContentByLanguage> contentByCountries = null;
 
-                    contentImages.forEach(contentImage -> contentImage.setContent(contentEntity));
+        if (command.contentsByLanguages() == null) {
+            contentByCountries = command.contentsByLanguages().stream()
+                    .map(contentByLanguageCommand -> {
+                        ContentByLanguage contentEntity = ContentByLanguage.builder()
+                                .language(Optional.ofNullable(contentByLanguageCommand.language()).orElse(null))
+                                .content(contentByLanguageCommand.content())
+                                .contentImages(contentImages)
+                                .build();
 
-                    return contentEntity;
-                })
-                .toList();
+                        contentImages.forEach(contentImage -> contentImage.setContent(contentEntity));
+
+                        return contentEntity;
+                    })
+                    .toList();
+        }
 
         Message message = Message.builder()
                 .chatRoom(chatRoomRepository.findById(command.chatRoomId()).orElseThrow(ChatRoomNotFoundException::new))
