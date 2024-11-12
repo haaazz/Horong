@@ -93,7 +93,11 @@ public class EducationServiceImpl implements EducationService {
                         education.getWord(),  // 원래 단어 그대로 사용
                         education.getDefinition(),  // 정의 그대로 사용
                         education.getExample1(),  // 예시 1 그대로 사용
-                        education.getExample2()   // 예시 2 그대로 사용
+                        education.getExample2(), // 예시 2 그대로 사용
+                        education.getAudio(),
+                        education.isSlang(),
+                        education.getWord(),
+                        education.getPronunciation()
                 );
 
                 // 변환된 TodayTranslatedWordResponse를 translatedWords에 추가
@@ -116,7 +120,11 @@ public class EducationServiceImpl implements EducationService {
                                 word.getTransWord(),
                                 word.getTransDefinition(),
                                 word.getTransExample1(),
-                                word.getTransExample2()
+                                word.getTransExample2(),
+                                education.getAudio(),
+                                education.isSlang(),
+                                education.getWord(),
+                                education.getPronunciation()
                         ))
                         .collect(Collectors.toList());
 

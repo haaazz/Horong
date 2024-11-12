@@ -9,5 +9,9 @@ public record TodayTranslatedWordResponse(
         String transWord,
         String transDefinition,
         String transExample1,
-        String transExample2
+        String transExample2,
+        String audio,
+        boolean isSlang,
+        String word,
+        String pronunciation
 ) {}
