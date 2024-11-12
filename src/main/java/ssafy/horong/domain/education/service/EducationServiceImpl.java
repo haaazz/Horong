@@ -15,6 +15,7 @@ import ssafy.horong.common.util.SecurityUtil;
 import ssafy.horong.domain.education.command.SaveEduciatonRecordCommand;
 import ssafy.horong.domain.education.entity.*;
 import ssafy.horong.domain.education.repository.*;
+import ssafy.horong.domain.member.common.Language;
 import ssafy.horong.domain.member.entity.User;
 import ssafy.horong.domain.member.repository.UserRepository;
 
@@ -45,16 +46,17 @@ public class EducationServiceImpl implements EducationService {
         LocalDateTime today = LocalDateTime.now();
         User currentUser = getCurrentUser();
 
+        // 오늘의 EducationDay를 찾거나 없으면 새로 생성
         EducationDay educationDay = educationDayRepository.findTopByUserAndCreatedAtBeforeTodayOrderByDayDesc(currentUser, today)
                 .orElseGet(() -> {
-                    // 오늘의 EducationDay가 없을 때 가장 최근의 day 값으로 새로 생성
+                    // 최근의 day 값으로 새로운 EducationDay 생성
                     int recentDay = educationDayRepository.findTopByUserOrderByCreatedAtDesc(currentUser)
                             .map(EducationDay::getDay)
                             .orElse(0);
 
                     int newDayValue = (recentDay == 0) ? 1 : recentDay + 1;
 
-                    // 새로운 EducationDay 생성
+                    // 새로운 EducationDay 생성 및 저장
                     EducationDay newEducationDay = EducationDay.builder()
                             .user(currentUser)
                             .wordIds(new ArrayList<>())
@@ -65,8 +67,10 @@ public class EducationServiceImpl implements EducationService {
                     return educationDayRepository.save(newEducationDay);
                 });
 
+        // 오늘의 단어 리스트 조회
         List<Education> todayWords = educationRepository.findByDay(educationDay.getDay());
 
+        // 단어 상세 정보 리스트 생성
         List<TodayEducationDetailResponse> wordDetails = new ArrayList<>();
         for (Education education : todayWords) {
             boolean isCompleted = educationDay.getWordIds().contains(education.getId().intValue());
@@ -74,12 +78,54 @@ public class EducationServiceImpl implements EducationService {
             wordDetails.add(new TodayEducationDetailResponse(education, isCompleted));
         }
 
-        List<EducationLanguage> translatedWords = new ArrayList<>();
-        for (Education education : todayWords) {
-            List<EducationLanguage> words = educationLanguageRepository.findByEducationIdAndLanguage(education.getId(), currentUser.getLanguage());
-            translatedWords.addAll(words);
+        // 번역된 단어 리스트 생성
+        List<TodayTranslatedWordResponse> translatedWords = new ArrayList<>();
+
+        if (currentUser.getLanguage() == Language.KOREAN) {
+            for (Education education : todayWords) {
+                log.info("education: {}", education);
+
+                // Education 엔티티의 데이터를 사용하여 TodayTranslatedWordResponse로 변환
+                TodayTranslatedWordResponse response = new TodayTranslatedWordResponse(
+                        education.getId(),
+                        education.getId(),  // 연관된 Education의 ID
+                        currentUser.getLanguage(),
+                        education.getWord(),  // 원래 단어 그대로 사용
+                        education.getDefinition(),  // 정의 그대로 사용
+                        education.getExample1(),  // 예시 1 그대로 사용
+                        education.getExample2()   // 예시 2 그대로 사용
+                );
+
+                // 변환된 TodayTranslatedWordResponse를 translatedWords에 추가
+                translatedWords.add(response);
+            }
+        }
+        else {
+            for (Education education : todayWords) {
+                log.info("education: {}", education);
+
+                // Education ID와 사용자 언어에 맞는 번역된 단어 리스트 조회
+                List<EducationLanguage> words = educationLanguageRepository.findByEducationIdAndLanguage(education.getId(), currentUser.getLanguage());
+
+                // EducationLanguage 리스트를 TodayTranslatedWordResponse 리스트로 변환
+                List<TodayTranslatedWordResponse> responses = words.stream()
+                        .map(word -> new TodayTranslatedWordResponse(
+                                word.getId(),
+                                word.getEducation().getId(),  // 연관된 Education의 ID
+                                word.getLanguage(),
+                                word.getTransWord(),
+                                word.getTransDefinition(),
+                                word.getTransExample1(),
+                                word.getTransExample2()
+                        ))
+                        .collect(Collectors.toList());
+
+                // 변환된 TodayTranslatedWordResponse 리스트를 translatedWords에 추가
+                translatedWords.addAll(responses);
+            }
         }
 
+        // 최종 응답 객체 반환
         return new TodayWordsResponse(wordDetails, translatedWords);
     }
 

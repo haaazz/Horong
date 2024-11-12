@@ -7,6 +7,6 @@ import java.util.List;
 
 public record TodayWordsResponse(
         List<TodayEducationDetailResponse> words,
-        List<EducationLanguage> translatedWords
+        List<TodayTranslatedWordResponse> translatedWords
 ) {
 }
