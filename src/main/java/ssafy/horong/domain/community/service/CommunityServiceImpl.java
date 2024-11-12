@@ -194,7 +194,7 @@ public class CommunityServiceImpl implements CommunityService {
     public void sendMessage(SendMessageCommand command) {
         List<ContentImage> contentImages = extractMessageContentImages(command.contentImageRequest());
 
-        List<ContentByLanguage> contentByCountries = null;
+        List<ContentByLanguage> contentByCountries = new ArrayList<>(); // 빈 리스트로 초기화
 
         if (command.contentsByLanguages() != null) {
             contentByCountries = command.contentsByLanguages().stream()
@@ -225,8 +225,7 @@ public class CommunityServiceImpl implements CommunityService {
         if (command.contentsByLanguages() != null) {
             notifyByMessageUser(receiver, "메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content(), Notification.NotificationType.MESSAGE, message);
             log.info("메시지 전송: {}", receiver.getNickname());
-        }
-        else {
+        } else {
             notifyByMessageUser(receiver, "사진이 도착했습니다", Notification.NotificationType.MESSAGE, message);
         }
     }
