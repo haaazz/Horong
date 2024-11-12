@@ -34,7 +34,7 @@ public class NotificationUtil {
         combinedNotifications.sort(Comparator.comparing(Notification::getCreatedAt).reversed());
 
         // Convert to DTOs
-        List<NotificationResponse> notificationResponse = NotificationResponse.convertToNotificationDTOs(combinedNotifications);
+        List<NotificationResponse> notificationResponse = NotificationResponse.convertToNotificationDTOs(combinedNotifications, user.getLanguage());
 
         // Send DTOs instead of entities
         sendNotificationToUser(notificationResponse, user.getId());

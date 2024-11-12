@@ -39,45 +39,50 @@ public class EducationServiceImpl implements EducationService {
     private final EducationDayRepository educationDayRepository;
     private final EducationStampRepository educationStampRepository;
 
+
     @Transactional
     public TodayWordsResponse getTodayWords() {
         LocalDateTime today = LocalDateTime.now();
         User currentUser = getCurrentUser();
+
         EducationDay educationDay = educationDayRepository.findTopByUserAndCreatedAtBeforeTodayOrderByDayDesc(currentUser, today)
                 .orElseGet(() -> {
                     // 오늘의 EducationDay가 없을 때 가장 최근의 day 값으로 새로 생성
                     int recentDay = educationDayRepository.findTopByUserOrderByCreatedAtDesc(currentUser)
                             .map(EducationDay::getDay)
-                            .orElse(0);  // 가장 최근의 값이 없으면 0으로 설정
+                            .orElse(0);
 
-                    // day가 0인 경우 기본값 1로 설정, 그렇지 않으면 가장 최근 값에 1을 더함
                     int newDayValue = (recentDay == 0) ? 1 : recentDay + 1;
 
                     // 새로운 EducationDay 생성
                     EducationDay newEducationDay = EducationDay.builder()
                             .user(currentUser)
-                            .wordIds(new ArrayList<>())  // 초기 빈 단어 목록
+                            .wordIds(new ArrayList<>())
                             .day(newDayValue)
                             .createdAt(LocalDateTime.now())
                             .build();
 
-                    // 새로 생성한 객체를 저장하고 반환
                     return educationDayRepository.save(newEducationDay);
                 });
 
-        log.info("오늘의 단어: {}", educationDay);
-
         List<Education> todayWords = educationRepository.findByDay(educationDay.getDay());
-        log.info("오늘의 단어: {}", todayWords);
-        log.info("단어 전부: {}", educationRepository.findAll());
-        User user = getCurrentUser();
+
+        List<TodayEducationDetailResponse> wordDetails = new ArrayList<>();
+        for (Education education : todayWords) {
+            boolean isCompleted = educationDay.getWordIds().contains(education.getId().intValue());
+            log.info("isCompleted: {}", isCompleted);
+            wordDetails.add(new TodayEducationDetailResponse(education, isCompleted));
+        }
+
         List<EducationLanguage> translatedWords = new ArrayList<>();
         for (Education education : todayWords) {
-            List<EducationLanguage> words = educationLanguageRepository.findByEducationIdAndLanguage(education.getId(), user.getLanguage());
+            List<EducationLanguage> words = educationLanguageRepository.findByEducationIdAndLanguage(education.getId(), currentUser.getLanguage());
             translatedWords.addAll(words);
         }
-        return new TodayWordsResponse(todayWords, translatedWords);
+
+        return new TodayWordsResponse(wordDetails, translatedWords);
     }
+
 
     public GetAllEducationRecordResponse getAllEducationRecord() {
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);

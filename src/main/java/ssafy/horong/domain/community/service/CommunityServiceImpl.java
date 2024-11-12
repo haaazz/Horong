@@ -127,7 +127,7 @@ public class CommunityServiceImpl implements CommunityService {
         comment.setContentByCountries(contentByCountries);
         commentRepository.save(comment);
 
-        notifyByPostUser(post.getAuthor(), "게시글에 새로운 댓글이 작성되었습니다: " + command.contentByCountries().get(0).content(), Notification.NotificationType.COMMENT, post.getId());
+        notifyByPostUser(post.getAuthor(), "게시글에 새로운 댓글이 작성되었습니다: " + command.contentByCountries().get(0).content(), Notification.NotificationType.COMMENT, post);
         log.info("알람 전송: {}", post.getAuthor().getNickname());
     }
 
@@ -218,7 +218,7 @@ public class CommunityServiceImpl implements CommunityService {
         messageRepository.save(message);
 
         User receiver = message.getChatRoom().getOpponent(getCurrentUser());
-        notifyByMessageUser(receiver, "메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content(), Notification.NotificationType.MESSAGE, message.getId());
+        notifyByMessageUser(receiver, "메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content(), Notification.NotificationType.MESSAGE, message);
         log.info("메시지 전송: {}", receiver.getNickname());
     }
 
@@ -718,14 +718,14 @@ public class CommunityServiceImpl implements CommunityService {
         }
     }
 
-    private void notifyByPostUser(User receiver, String messageContent, Notification.NotificationType type, Long postId) {
+    private void notifyByPostUser(User receiver, String messageContent, Notification.NotificationType type, Post post) {
         if (!receiver.equals(getCurrentUser())) {
             // 알림 생성 및 저장
             Notification notification = Notification.builder()
                     .receiver(receiver)
                     .sender(getCurrentUser())
-                    .message(messageContent)
-                    .originPostId(postId)
+                    .messageContent(messageContent)
+                    .Post(post)
                     .isRead(false)
                     .createdAt(LocalDateTime.now())
                     .type(type)
@@ -736,7 +736,7 @@ public class CommunityServiceImpl implements CommunityService {
             List<Notification> combinedNotifications = getCombinedNotifications(receiver);
 
             // Notification 객체를 NotificationResponse DTO로 변환
-            List<NotificationResponse> notificationDTOs = NotificationResponse.convertToNotificationDTOs(combinedNotifications);
+            List<NotificationResponse> notificationDTOs = NotificationResponse.convertToNotificationDTOs(combinedNotifications, receiver.getLanguage());
 
             // 사용자에게 DTO로 알림 전송
             notificationUtil.sendNotificationToUser(notificationDTOs, receiver.getId());
@@ -746,14 +746,14 @@ public class CommunityServiceImpl implements CommunityService {
         }
     }
 
-    private void notifyByMessageUser(User receiver, String messageContent, Notification.NotificationType type, Long messageId) {
+    private void notifyByMessageUser(User receiver, String messageContent, Notification.NotificationType type, Message message) {
         if (!receiver.equals(getCurrentUser())) {
             // 알림 생성 및 저장
             Notification notification = Notification.builder()
                     .receiver(receiver)
                     .sender(getCurrentUser())
-                    .message(messageContent)
-                    .originMessageId(messageId)
+                    .messageContent(messageContent)
+                    .Message(message)
                     .isRead(false)
                     .createdAt(LocalDateTime.now())
                     .type(type)
@@ -764,7 +764,7 @@ public class CommunityServiceImpl implements CommunityService {
             List<Notification> combinedNotifications = getCombinedNotifications(receiver);
 
             // Notification 객체를 NotificationResponse DTO로 변환
-            List<NotificationResponse> notificationDTOs = NotificationResponse.convertToNotificationDTOs(combinedNotifications);
+            List<NotificationResponse> notificationDTOs = NotificationResponse.convertToNotificationDTOs(combinedNotifications, receiver.getLanguage());
 
             // 사용자에게 DTO로 알림 전송
             notificationUtil.sendNotificationToUser(notificationDTOs, receiver.getId());

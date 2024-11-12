@@ -26,11 +26,15 @@ public class Notification {
     @JoinColumn(name = "sender_id")
     private User sender;
 
-    private String message;
+    private String messageContent;
 
-    private Long originPostId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "post_id")
+    private Post Post;
 
-    private Long originMessageId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "message_id")
+    private Message Message;
 
     private boolean isRead;
 
