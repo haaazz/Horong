@@ -1,10 +1,7 @@
 package ssafy.horong.domain.horongChat.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import ssafy.horong.domain.member.entity.User;
 
 import java.time.LocalDateTime;
@@ -14,27 +11,25 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@Setter
 public class HorongChat {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
+    private String content;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AuthorType authorType;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
-
-    @Column(nullable = false)
-    private String content;
+    @JoinColumn(name = "room_id")
+    private HorongChatRoom room;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
-
-    @Column(nullable = false)
-    private Long roomId;
 
     @PrePersist
     protected void onCreate() {
@@ -42,7 +37,6 @@ public class HorongChat {
     }
 
     public enum AuthorType {
-        USER, // 사용자
-        BOT   // 봇
+        USER, BOT
     }
 }

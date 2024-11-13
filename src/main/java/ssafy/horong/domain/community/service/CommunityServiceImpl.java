@@ -15,6 +15,7 @@ import ssafy.horong.common.exception.Board.*;
 import ssafy.horong.common.util.NotificationUtil;
 import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
+import ssafy.horong.common.util.UserUtil;
 import ssafy.horong.domain.community.command.*;
 import ssafy.horong.domain.community.elastic.PostDocument;
 import ssafy.horong.domain.community.elastic.PostElasticsearchRepository;
@@ -50,6 +51,7 @@ public class CommunityServiceImpl implements CommunityService {
     private final ContentImageRepository contentImageRepository;
     private final ContentByCountryRepository contentByLanguageRepository;
     private final ChatRoomRepository chatRoomRepository;
+    private final UserUtil userUtil;
 
     @Transactional
     public void createPost(CreatePostCommand command) {
@@ -58,7 +60,7 @@ public class CommunityServiceImpl implements CommunityService {
 
         Post post = Post.builder()
                 .type(command.boardType())
-                .author(getCurrentUser())
+                .author(userUtil.getCurrentUser())
                 .build();
 
         List<ContentImage> contentImages = extractContentImages(command.contentImageRequest());
@@ -69,7 +71,7 @@ public class CommunityServiceImpl implements CommunityService {
         postRepository.save(post);
 
         savePostDocument(post, command.content());
-        log.info("사용자 {}의 게시글 생성: {}", getCurrentUser().getId(), post.getId());
+        log.info("사용자 {}의 게시글 생성: {}", userUtil.getCurrentUser().getId(), post.getId());
     }
 
     @Transactional
@@ -111,7 +113,7 @@ public class CommunityServiceImpl implements CommunityService {
         Post post = getPost(command.postId());
 
         Comment comment = Comment.builder()
-                .author(getCurrentUser())
+                .author(userUtil.getCurrentUser())
                 .board(post)
                 .build();
 
@@ -181,7 +183,7 @@ public class CommunityServiceImpl implements CommunityService {
     @Override
     public ChatRoom createChatRoom(Long userId, Long postId) {
         ChatRoom chatRoom = ChatRoom.builder()
-                .host(getCurrentUser())
+                .host(userUtil.getCurrentUser())
                 .post(postRepository.findById(postId).orElseThrow(PostNotFoundException::new))
                 .guest(userRepository.findById(userId).orElseThrow(null))
                 .build();
@@ -227,7 +229,7 @@ public class CommunityServiceImpl implements CommunityService {
         Message message = Message.builder()
                 .chatRoom(chatRoomRepository.findById(command.chatRoomId()).orElseThrow(ChatRoomNotFoundException::new))
                 .contentByCountries(contentByCountries)
-                .user(getCurrentUser())
+                .user(userUtil.getCurrentUser())
                 .build();
 
         // 각 contentByCountries에 message 설정
@@ -235,7 +237,7 @@ public class CommunityServiceImpl implements CommunityService {
         messageRepository.save(message);
 
         // 수신자에게 알림 전송
-        User receiver = message.getChatRoom().getOpponent(getCurrentUser());
+        User receiver = message.getChatRoom().getOpponent(userUtil.getCurrentUser());
         if (command.contentsByLanguages() != null) {
             notifyByMessageUser(receiver, "메시지가 도착했습니다: " + command.contentsByLanguages().get(0).content(), Notification.NotificationType.MESSAGE, message);
             log.info("메시지 전송: {}", receiver.getNickname());
@@ -247,20 +249,20 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Override
     public List<GetAllMessageListResponse> getAllMessageList() {
-        List<ChatRoom> chatRooms = chatRoomRepository.findAllByUser(getCurrentUser());
+        List<ChatRoom> chatRooms = chatRoomRepository.findAllByUser(userUtil.getCurrentUser());
         log.info("모든 채팅방 조회: {}", chatRooms);
 
         return chatRooms.stream()
                 .map(chatRoom -> {
-                    User opponent = chatRoom.getOpponent(getCurrentUser());
+                    User opponent = chatRoom.getOpponent(userUtil.getCurrentUser());
                     List<Message> messages = chatRoom.getMessages();
 
-                    long unreadCount = messageRepository.countUnreadMessagesForOpponent(chatRoom, getCurrentUser());
+                    long unreadCount = messageRepository.countUnreadMessagesForOpponent(chatRoom, userUtil.getCurrentUser());
 
                     messages.sort(Comparator.comparing(Message::getCreatedAt).reversed());
 
                     Message lastMessage = messages.get(0);
-                    String lastContent = getContentByLanguage(lastMessage.getContentByCountries(), getCurrentUser().getLanguage());
+                    String lastContent = getContentByLanguage(lastMessage.getContentByCountries(), userUtil.getCurrentUser().getLanguage());
 
                     return new GetAllMessageListResponse(
                             chatRoom.getId(),
@@ -282,7 +284,8 @@ public class CommunityServiceImpl implements CommunityService {
     public GetPostIdAndMessageListResponse getMessageList(GetMessageListCommand command) {
         List<Message> messages = messageRepository.findAllByChatRoomId(command.roomId());
         Long postId = chatRoomRepository.findPostIdByChatRoomId(command.roomId());
-        Language userLanguage = getCurrentUser().getLanguage();
+        User user = userUtil.getCurrentUser();
+        Language userLanguage = user.getLanguage();
 
         List<GetMessageListResponse> messageList = messages.stream()
                 .map(message -> {
@@ -297,12 +300,12 @@ public class CommunityServiceImpl implements CommunityService {
                             .orElse(null); // 이미지가 없을 경우 null
 
                     // 메시지 읽음 처리
-                    if (!message.getUser().getId().equals(getCurrentUser().getId())) {
+                    if (!message.getUser().getId().equals(userUtil.getCurrentUser().getId())) {
                         message.readMessage();
                         messageRepository.save(message);
                     }
 
-                    Message.UserMessageType userMessageType = message.getUser().getId().equals(getCurrentUser().getId())
+                    Message.UserMessageType userMessageType = message.getUser().getId().equals(userUtil.getCurrentUser().getId())
                             ? Message.UserMessageType.USER
                             : Message.UserMessageType.OPPONENT;
 
@@ -310,7 +313,9 @@ public class CommunityServiceImpl implements CommunityService {
                 })
                 .toList();
 
-        return GetPostIdAndMessageListResponse.of(postId, messageList);
+        Long opponent = messageRepository.findOpponentIdByChatRoomIdAndUserId(command.roomId(), user.getId());
+
+        return GetPostIdAndMessageListResponse.of(postId, opponent, messageList);
     }
 
 
@@ -323,7 +328,7 @@ public class CommunityServiceImpl implements CommunityService {
             throw new PostDeletedException();
         }
 
-        Language language = getCurrentUser().getLanguage();
+        Language language = userUtil.getCurrentUser().getLanguage();
         String content = getContentByLanguage(post, language, CONTENT);
         String title = getContentByLanguage(post, language, TITLE);
 
@@ -347,25 +352,34 @@ public class CommunityServiceImpl implements CommunityService {
     public Page<GetPostResponse> getPostList(Pageable pageable, String boardType) {
         log.info("모든 게시글 조회 (페이지네이션)");
 
+        // 1. 데이터베이스에서 정렬을 처리하도록 Pageable에 정렬 조건 추가
         Pageable sortedPageable = PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
 
+        // 2. 데이터베이스에서 게시글 목록을 가져옴 (필터링은 DB에서 처리할 수도 있음)
         Page<Post> postPage = postRepository.findByType(BoardType.valueOf(boardType), sortedPageable);
-        Language language = getCurrentUser().getLanguage();
 
+        // 현재 사용자의 언어 가져오기
+        Language language = userUtil.getCurrentUser().getLanguage();
+
+        // 3. 스트림을 사용해 각 게시글을 GetPostResponse로 변환
         List<GetPostResponse> postResponses = postPage.getContent().stream()
-                .filter(post -> post.getDeletedAt() == null)
+                .filter(post -> post.getDeletedAt() == null)  // 삭제되지 않은 게시글만 필터링
                 .map(post -> {
                     String content = getContentByLanguage(post, language, CONTENT);
                     String title = getContentByLanguage(post, language, TITLE);
 
+                    // 댓글도 정렬해서 변환
                     List<GetCommentResponse> commentResponses = convertToCommentResponse(
-                            post.getComments().stream().sorted(Comparator.comparing(Comment::getCreatedAt).reversed()).toList()
+                            post.getComments().stream()
+                                    .sorted(Comparator.comparing(Comment::getCreatedAt).reversed())  // 댓글을 최신순으로 정렬
+                                    .toList()
                     );
 
+                    // 4. S3에서 프로필 이미지를 가져오는 부분은 캐싱하거나 비동기 처리 고려 가능
                     return new GetPostResponse(
                             post.getId(),
                             title,
@@ -379,6 +393,7 @@ public class CommunityServiceImpl implements CommunityService {
                 })
                 .toList();
 
+        // 5. PageImpl로 반환 (총 게시글 수 포함)
         return new PageImpl<>(postResponses, sortedPageable, postPage.getTotalElements());
     }
 
@@ -388,7 +403,7 @@ public class CommunityServiceImpl implements CommunityService {
         log.info("Elasticsearch 검색 시작: keyword={}", keyword);
 
         String[] terms = keyword.split("\\s+");
-        String userLanguage = getCurrentUser().getLanguage().name();
+        String userLanguage = userUtil.getCurrentUser().getLanguage().name();
 
         Set<PostDocument> uniqueDocuments = Arrays.stream(terms)
                 .flatMap(term -> postElasticsearchRepository.findByTitleKoOrTitleZhOrTitleJaOrTitleEnOrAuthorOrContentKoOrContentZhOrContentJaOrContentEn(
@@ -502,7 +517,7 @@ public class CommunityServiceImpl implements CommunityService {
     private List<GetPostResponse> getPostsByBoardType(BoardType boardType, int limit) {
         log.info("특정 게시판 타입별 게시글 조회: {}", boardType);
 
-        Language language = getCurrentUser().getLanguage();
+        Language language = userUtil.getCurrentUser().getLanguage();
 
         Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
 
@@ -569,7 +584,7 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     private void validateUserOrAdmin(User author) {
-        if (!author.equals(getCurrentUser()) &&
+        if (!author.equals(userUtil.getCurrentUser()) &&
                 SecurityUtil.getLoginMemberRole().orElse(MemberRole.USER) != MemberRole.ADMIN) {
             throw new NotAuthenticatedException();
         }
@@ -598,7 +613,7 @@ public class CommunityServiceImpl implements CommunityService {
                         );
                     }
 
-                    String content = getContentByLanguage(comment.getContentByCountries(), getCurrentUser().getLanguage());
+                    String content = getContentByLanguage(comment.getContentByCountries(), userUtil.getCurrentUser().getLanguage());
 
                     return new GetCommentResponse(
                             comment.getId(),
@@ -647,13 +662,6 @@ public class CommunityServiceImpl implements CommunityService {
         });
 
         postElasticsearchRepository.save(postDocument);
-    }
-
-    private User getCurrentUser() {
-        Long userId = SecurityUtil.getLoginMemberId()
-                .orElseThrow(() -> new RuntimeException("로그인한 사용자가 존재하지 않습니다."));
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자가 존재하지 않습니다."));
     }
 
     private List<ContentImage> extractContentImages(List<ContentImageRequest> imageRequests) {
@@ -753,11 +761,11 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     private void notifyByPostUser(User receiver, String messageContent, Notification.NotificationType type, Post post) {
-        if (!receiver.equals(getCurrentUser())) {
+        if (!receiver.equals(userUtil.getCurrentUser())) {
             // 알림 생성 및 저장
             Notification notification = Notification.builder()
                     .receiver(receiver)
-                    .sender(getCurrentUser())
+                    .sender(userUtil.getCurrentUser())
                     .messageContent(messageContent)
                     .Post(post)
                     .isRead(false)
@@ -781,11 +789,11 @@ public class CommunityServiceImpl implements CommunityService {
     }
 
     private void notifyByMessageUser(User receiver, String messageContent, Notification.NotificationType type, Message message) {
-        if (!receiver.equals(getCurrentUser())) {
+        if (!receiver.equals(userUtil.getCurrentUser())) {
             // 알림 생성 및 저장
             Notification notification = Notification.builder()
                     .receiver(receiver)
-                    .sender(getCurrentUser())
+                    .sender(userUtil.getCurrentUser())
                     .messageContent(messageContent)
                     .Message(message)
                     .isRead(false)
