@@ -7,6 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ssafy.horong.api.CommonResponse;
+import ssafy.horong.api.shortForm.request.ModifyIsSavedRequest;
+import ssafy.horong.api.shortForm.request.ModifyPreferenceRequest;
+import ssafy.horong.api.shortForm.request.SaveShortFormLogRequest;
 import ssafy.horong.api.shortForm.response.ShortFromListResponse;
 import ssafy.horong.domain.shortForm.command.ModifyIsSavedCommand;
 import ssafy.horong.domain.shortForm.command.SaveShortFormLogCommand;
@@ -32,28 +35,27 @@ public class ShortFromController {
         return CommonResponse.ok(response);
     }
 
-
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "숏폼 로그 저장", description = "사용자의 숏폼 시청 로그를 저장합니다.")
     @PostMapping("/log")
-    public CommonResponse<String> saveShortFormLog(@RequestBody SaveShortFormLogCommand command) {
-        String response = shortFormService.saveShortFormLog(command);
+    public CommonResponse<String> saveShortFormLog(@RequestBody SaveShortFormLogRequest request) {
+        String response = shortFormService.saveShortFormLog(request.toCommand());
         return CommonResponse.ok(response);
     }
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "숏폼 좋아요/싫어요 수정", description = "사용자가 숏폼에 대해 좋아요 또는 싫어요를 수정합니다.")
     @PostMapping("/preference")
-    public CommonResponse<String> modifyPreference(@RequestBody ModifyPreferenceCommand command) {
-        String response = shortFormService.modifyPreference(command);
+    public CommonResponse<String> modifyPreference(@RequestBody ModifyPreferenceRequest request) {
+        String response = shortFormService.modifyPreference(request.toCommand());
         return CommonResponse.ok(response);
     }
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "숏폼 스크랩 여부 수정", description = "사용자가 숏폼의 스크랩 여부를 수정합니다.")
     @PostMapping("/is_saved")
-    public CommonResponse<String> modifyIsSaved(@RequestBody ModifyIsSavedCommand command) {
-        String response = shortFormService.modifyIsSaved(command);
+    public CommonResponse<String> modifyIsSaved(@RequestBody ModifyIsSavedRequest request) {
+        String response = shortFormService.modifyIsSaved(request.toCommand());
         return CommonResponse.ok(response);
     }
 }
