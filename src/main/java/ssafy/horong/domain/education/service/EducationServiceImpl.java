@@ -183,10 +183,12 @@ public class EducationServiceImpl implements EducationService {
         List<Education> findAll = educationRepository.findAll();
         log.info("교육 목록: {}", findAll);
         log.info("education: {}", education);
+        log.info("command: {}", command);
 
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
         UUID recordIndex = UUID.randomUUID();
         String location = s3Util.uploadToS3(command.audio(), command.word() + "/" + userId + "/" + recordIndex, "education/");
+        log.info("location: {}", location);
         log.info("word_id", education.getId());
 
         EducationRecord educationRecord = EducationRecord.builder()
@@ -201,7 +203,7 @@ public class EducationServiceImpl implements EducationService {
         log.info("s3 주소 {}", s3Util.getS3UrlFromS3(location));
 
         URI uri = s3Util.getS3UrlFromS3(location);
-
+        log.info("uri: {}", uri);
         // WebClient 호출, application/octet-stream으로 수신
         SaveEducationResponseFromData response = webClient.post()
                 .uri(requestUrl)
