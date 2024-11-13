@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ssafy.horong.common.util.NotificationUtil;
 import ssafy.horong.common.util.SecurityUtil;
+import ssafy.horong.common.util.UserUtil;
 import ssafy.horong.domain.community.entity.Notification;
 import ssafy.horong.domain.community.repository.NotificationRepository;
 import ssafy.horong.domain.member.entity.User;

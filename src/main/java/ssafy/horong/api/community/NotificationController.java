@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import ssafy.horong.api.CommonResponse;
 import ssafy.horong.common.util.NotificationUtil;
+import ssafy.horong.common.util.UserUtil;
 import ssafy.horong.domain.community.entity.Notification;
 import ssafy.horong.domain.community.service.NotificationService;
 import ssafy.horong.domain.member.common.Language;
@@ -21,6 +22,7 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final NotificationUtil notificationUtil;
     private final UserRepository userRepository;
+    private final UserUtil userUtil;
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "알림 읽음 처리", description = "알림을 읽음 처리합니다.")
@@ -40,7 +42,7 @@ public class NotificationController {
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "상대의 언어를 조회", description = "상대의 언어를 조회합니다.")
     @GetMapping("/language/{userId}")
-    public CommonResponse<Language> getLanguage(@PathVariable String userId) {
-        return CommonResponse.ok(userRepository.findByUserId(userId).orElseThrow(null).getLanguage());
+    public CommonResponse<Language> getLanguage(@PathVariable Long userId) {
+        return CommonResponse.ok(userRepository.findByUserLongId(userId).orElseThrow(null).getLanguage());
     }
 }

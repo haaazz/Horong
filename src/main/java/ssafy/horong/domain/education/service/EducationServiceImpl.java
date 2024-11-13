@@ -12,6 +12,7 @@ import ssafy.horong.common.exception.data.DataNotFoundException;
 import ssafy.horong.common.properties.WebClientProperties;
 import ssafy.horong.common.util.S3Util;
 import ssafy.horong.common.util.SecurityUtil;
+import ssafy.horong.common.util.UserUtil;
 import ssafy.horong.domain.education.command.SaveEduciatonRecordCommand;
 import ssafy.horong.domain.education.entity.*;
 import ssafy.horong.domain.education.repository.*;
@@ -31,7 +32,6 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class EducationServiceImpl implements EducationService {
     private final EducationRepository educationRepository;
-    private final UserRepository userRepository;
     private final EducationLanguageRepository educationLanguageRepository;
     private final EducationRecordRepository educationRecordRepository;
     private final S3Util s3Util;
@@ -39,12 +39,12 @@ public class EducationServiceImpl implements EducationService {
     private final WebClientProperties webClientProperties;
     private final EducationDayRepository educationDayRepository;
     private final EducationStampRepository educationStampRepository;
-
+    private final UserUtil userUtil;
 
     @Transactional
     public TodayWordsResponse getTodayWords() {
         LocalDateTime today = LocalDateTime.now();
-        User currentUser = getCurrentUser();
+        User currentUser = userUtil.getCurrentUser();
 
         // 오늘의 EducationDay를 찾거나 없으면 새로 생성
         EducationDay educationDay = educationDayRepository.findTopByUserAndCreatedAtBeforeTodayOrderByDayDesc(currentUser, today)
@@ -194,7 +194,7 @@ public class EducationServiceImpl implements EducationService {
         EducationRecord educationRecord = EducationRecord.builder()
                 .education(education)
                 .audio(location)
-                .user(getCurrentUser())
+                .user(userUtil.getCurrentUser())
                 .cer(0) // 임시 값
                 .build();
 
@@ -231,8 +231,8 @@ public class EducationServiceImpl implements EducationService {
         educationRecordRepository.save(educationRecord);
 
         // 기존의 EducationDay를 찾거나 오늘 날짜로 새로운 EducationDay 생성
+        User currentUser = userUtil.getCurrentUser();
         LocalDateTime today = LocalDateTime.now();
-        User currentUser = getCurrentUser();
         EducationDay educationDay = educationDayRepository.findTopByUserAndCreatedAtBeforeTodayOrderByDayDesc(currentUser, today)
                 .orElseGet(() -> {
                     // 오늘의 EducationDay가 없을 때 가장 최근의 day 값으로 새로 생성
@@ -269,7 +269,7 @@ public class EducationServiceImpl implements EducationService {
             if (!stampExists) {
                 // 스탬프가 없다면 새로 생성
                 EducationStamp educationStamp = EducationStamp.builder()
-                        .user(getCurrentUser())
+                        .user(userUtil.getCurrentUser())
                         .build();
 
                 educationStampRepository.save(educationStamp);
@@ -285,14 +285,6 @@ public class EducationServiceImpl implements EducationService {
                 response.hypIdx(),
                 uri
         );
-    }
-
-
-    private User getCurrentUser() {
-        Long userId = SecurityUtil.getLoginMemberId()
-                .orElseThrow(() -> new RuntimeException("로그인한 사용자가 존재하지 않습니다."));
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자가 존재하지 않습니다."));
     }
 
     public List<LocalDate> getStampDates() {
