@@ -65,7 +65,7 @@ public class NotificationUtil {
 
     public SseEmitter createSseEmitter() {
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow();
-        SseEmitter emitter = new SseEmitter(6000000L); // 10분 타임아웃
+        SseEmitter emitter = new SseEmitter(600000L); // 10분 타임아웃
 
         // 해당 userId의 리스트를 초기화하고 emitter 추가
         emitters.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(emitter);
@@ -97,7 +97,7 @@ public class NotificationUtil {
                     timer.cancel(); // 연결이 끊어지면 타이머 중단
                 }
             }
-        }, 0, 1000000); // 5초 간격으로 더미 이벤트 전송
+        }, 0, 60000); // 5초 간격으로 더미 이벤트 전송
 
         return emitter;
     }
@@ -126,7 +126,7 @@ public class NotificationUtil {
                     timer.cancel();
                 }
             }
-        }, 0, 5000000);
+        }, 0, 60000); // 1분 간격으로 더미 이벤트 전송
     }
 
     public Map<Long, List<SseEmitter>> getEmitters() {
