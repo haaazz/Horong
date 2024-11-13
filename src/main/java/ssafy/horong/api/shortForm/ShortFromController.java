@@ -36,6 +36,14 @@ public class ShortFromController {
     }
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "숏폼 detail 조회", description = "숏폼의 상세 정보를 조회합니다.")
+    @GetMapping("/{shortFormId}")
+    public CommonResponse<ShortFromListResponse> getShortFormDetail(@PathVariable Long shortFormId) {
+        ShortFromListResponse response = shortFormService.getShortFormDetail(shortFormId);
+        return CommonResponse.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "숏폼 로그 저장", description = "사용자의 숏폼 시청 로그를 저장합니다.")
     @PostMapping("/log")
     public CommonResponse<String> saveShortFormLog(@RequestBody SaveShortFormLogRequest request) {

@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface ShortFormService {
     List<ShortFromListResponse> getShortFormList();
+    ShortFromListResponse getShortFormDetail(Long shortFormId);
     String saveShortFormLog(SaveShortFormLogCommand command);
     String modifyPreference(ModifyPreferenceCommand command);
     String modifyIsSaved(ModifyIsSavedCommand command);

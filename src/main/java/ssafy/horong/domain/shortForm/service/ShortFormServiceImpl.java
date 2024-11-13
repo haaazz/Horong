@@ -56,6 +56,29 @@ public class ShortFormServiceImpl implements ShortFormService {
         return response;
     }
 
+    public ShortFromListResponse getShortFormDetail(Long shortFormId) {
+        // 요청 URL 생성
+        String requestUrl = webClientProperties.url() + "/shortform/" + userUtil.getCurrentUser().getId() + "/" + shortFormId;
+
+        // WebClient 호출
+        ShortFromListResponse response = webClient.get()
+                .uri(requestUrl)
+                .retrieve()
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                .defaultIfEmpty("Unknown error")
+                                .flatMap(errorBody -> Mono.error(new DataNotFoundException()))
+                )
+                .bodyToMono(ShortFromListResponse.class)
+                .blockOptional()
+                .orElseThrow(DataNotFoundException::new);
+
+        log.info("response: {}", response);
+
+        return response;
+    }
+
     public String saveShortFormLog(SaveShortFormLogCommand command) {
         // 요청 URL 생성
         String requestUrl = webClientProperties.url() + "/shortform/log";

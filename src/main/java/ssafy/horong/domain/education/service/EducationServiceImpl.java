@@ -139,7 +139,7 @@ public class EducationServiceImpl implements EducationService {
 
     public GetAllEducationRecordResponse getAllEducationRecord() {
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
-        List<EducationRecord> educationRecords = educationRecordRepository.findByUserId(userId);
+        List<EducationRecord> educationRecords = educationRecordRepository.findByUserIdWithEducation(userId);
 
         // LocalDate와 word별로 그룹화
         Map<LocalDate, Map<String, List<EducationRecordResponse>>> groupedByDateAndWord = new HashMap<>();
@@ -309,7 +309,7 @@ public class EducationServiceImpl implements EducationService {
 
     public List<EducationRecordResponse> getEducationRecordDetail(Long wordId) {
         User user = userUtil.getCurrentUser();
-        List<EducationRecord> educationRecords = educationRecordRepository.findByEducationIdAndUserId(wordId, user.getId());
+        List<EducationRecord> educationRecords = educationRecordRepository.findByEducationIdAndUserIdWithEducation(wordId, user.getId());
 
         // EducationRecord 리스트를 EducationRecordResponse 리스트로 변환
         return educationRecords.stream()
