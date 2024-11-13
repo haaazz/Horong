@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -321,7 +320,6 @@ public class CommunityServiceImpl implements CommunityService {
 
 
     @Override
-    @Cacheable(value = "postCache", key = "#id")
     public GetPostResponse getPostById(Long id) {
         log.info("게시글 조회: {}", id);
         Post post = getPost(id);
