@@ -17,4 +17,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     @Query("SELECT COUNT(m) FROM Message m WHERE m.chatRoom = :chatRoom AND m.isRead = false AND m.user <> :user")
     long countUnreadMessagesForOpponent(@Param("chatRoom") ChatRoom chatRoom, @Param("user") User user);
+
+    @Query("SELECT CASE WHEN c.host.id = :myId THEN c.guest.id ELSE c.host.id END " +
+            "FROM ChatRoom c WHERE c.id = :chatRoomId")
+    Long findOpponentIdByChatRoomIdAndUserId(@Param("chatRoomId") Long chatRoomId, @Param("myId") Long myId);
 }
