@@ -9,6 +9,8 @@ import ssafy.horong.api.CommonResponse;
 import ssafy.horong.common.util.NotificationUtil;
 import ssafy.horong.domain.community.entity.Notification;
 import ssafy.horong.domain.community.service.NotificationService;
+import ssafy.horong.domain.member.common.Language;
+import ssafy.horong.domain.member.repository.UserRepository;
 
 
 @RestController
@@ -18,6 +20,7 @@ public class NotificationController {
 
     private final NotificationService notificationService;
     private final NotificationUtil notificationUtil;
+    private final UserRepository userRepository;
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "알림 읽음 처리", description = "알림을 읽음 처리합니다.")
@@ -34,4 +37,10 @@ public class NotificationController {
         return notificationUtil.createSseEmitter();
     }
 
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "상대의 언어를 조회", description = "상대의 언어를 조회합니다.")
+    @GetMapping("/language/{userId}")
+    public CommonResponse<Language> getLanguage(@PathVariable String userId) {
+        return CommonResponse.ok(userRepository.findByUserId(userId).orElseThrow(null).getLanguage());
+    }
 }
