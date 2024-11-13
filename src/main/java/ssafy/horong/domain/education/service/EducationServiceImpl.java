@@ -259,7 +259,6 @@ public class EducationServiceImpl implements EducationService {
             educationDay.getWordIds().add(education.getId().intValue());
         }
 
-        // 5개의 단어를 학습했는지 확인
         if (educationDay.getWordIds().size() >= 5) {
             LocalDate todayDate = LocalDate.now();
 
@@ -272,6 +271,9 @@ public class EducationServiceImpl implements EducationService {
                         .build();
 
                 educationStampRepository.save(educationStamp);
+                log.info("새로운 스탬프가 생성되었습니다.");
+            } else {
+                log.info("오늘 날짜에 이미 스탬프가 존재합니다.");
             }
         }
 
@@ -287,12 +289,22 @@ public class EducationServiceImpl implements EducationService {
     }
 
     public List<LocalDate> getStampDates() {
-        Long userId = SecurityUtil.getLoginMemberId().orElseThrow(null);
-        List<EducationStamp> stamps = educationStampRepository.findLatestByUserIdWithIdEndingInZero(userId);
-        return stamps.stream()
+        User currentUser = userUtil.getCurrentUser();
+        List<EducationStamp> stamps = educationStampRepository.findByUserId(currentUser.getId());
+        List<LocalDate> dates = stamps.stream()
                 .map(EducationStamp::getCreatedAt)
                 .map(LocalDateTime::toLocalDate)
                 .toList();
+
+        // 리스트 길이가 10 이상인 경우 처리
+        if (dates.size() >= 10) {
+            int remainder = dates.size() % 10;
+            return dates.stream()
+                    .filter(date -> dates.indexOf(date) % 10 == remainder)
+                    .toList();
+        }
+
+        return dates;
     }
 
     public List<EducationRecordResponse> getEducationRecordDetail(Long wordId) {

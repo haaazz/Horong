@@ -18,7 +18,8 @@ public interface EducationStampRepository extends JpaRepository<EducationStamp, 
 
     int countByUser(User user);
 
-    @Query("SELECT es FROM EducationStamp es WHERE es.user.id = :userId AND MOD(es.id, 10) = 0 " +
-            "ORDER BY es.createdAt DESC")
+    @Query(value = "SELECT es FROM EducationStamp es WHERE es.user.id = :userId AND MOD(es.id, 10) = 0 ORDER BY es.createdAt DESC", nativeQuery = true)
     List<EducationStamp> findLatestByUserIdWithIdEndingInZero(@Param("userId") Long userId);
+
+    List<EducationStamp>findByUserId(Long userId);
 }
