@@ -14,6 +14,7 @@ import ssafy.horong.common.util.UserUtil;
 import ssafy.horong.domain.shortForm.command.ModifyIsSavedCommand;
 import ssafy.horong.domain.shortForm.command.SaveShortFormLogCommand;
 import ssafy.horong.domain.shortForm.command.ModifyPreferenceCommand;
+import java.time.format.DateTimeFormatter;
 
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +34,7 @@ public class ShortFormServiceImpl implements ShortFormService {
         Long userId = userUtil.getCurrentUser().getId();
 
         // 요청 URL 생성
-        String requestUrl = webClientProperties.url() + "/shortForm/" + userId;
+        String requestUrl = webClientProperties.url() + "/shortform/" + userId;
 
         // WebClient 호출
         List<ShortFromListResponse> response = webClient.get()
@@ -60,12 +61,16 @@ public class ShortFormServiceImpl implements ShortFormService {
         String requestUrl = webClientProperties.url() + "/shortform/log";
         Long userId = userUtil.getCurrentUser().getId();
 
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
         // 요청 바디 생성
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("short_id", command.shortFormId());
+        requestBody.put("shortform_id", command.shortFormId());
         requestBody.put("user_id", userId);
-        requestBody.put("start_at", command.startAt());
-        requestBody.put("end_at", command.endAt());
+        requestBody.put("start_at", command.startAt().format(formatter)); // 날짜 형식 변환
+        requestBody.put("end_at", command.endAt().format(formatter));     // 날짜 형식 변환
+
+        log.info("로그 저장 요청: {}", requestBody);
 
         // WebClient 호출
         String response = webClient.post()
@@ -82,7 +87,7 @@ public class ShortFormServiceImpl implements ShortFormService {
                 .block();
 
         log.info("로그 저장 응답: {}", response);
-        return response;
+        return "로그 저장에 성공했습니다.";
     }
 
     // 숏폼 좋아요/싫어요 수정
@@ -92,9 +97,10 @@ public class ShortFormServiceImpl implements ShortFormService {
 
         // 요청 바디 생성
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("short_id", command);
+        requestBody.put("shortform_id", command.shortFormId());
         requestBody.put("user_id", userUtil.getCurrentUser().getId());
-        requestBody.put("preference", command);
+        requestBody.put("preference", command.preference());
+        log.info("좋아요/싫어요 수정 요청: {}", requestBody);
 
         // WebClient 호출
         String response = webClient.post()
@@ -111,7 +117,7 @@ public class ShortFormServiceImpl implements ShortFormService {
                 .block();
 
         log.info("좋아요/싫어요 수정 응답: {}", response);
-        return response;
+        return "좋아요/싫어요 반영에 성공했습니다.";
     }
 
     // 숏폼 스크랩 여부 수정
@@ -122,9 +128,11 @@ public class ShortFormServiceImpl implements ShortFormService {
 
         // 요청 바디 생성
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("short_id", command.shortFormId());
+        requestBody.put("shortform_id", command.shortFormId());
         requestBody.put("user_id", userUtil.getCurrentUser().getId());
         requestBody.put("is_saved", command.isSaved());
+
+        log.info("스크랩 여부 수정 요청: {}", requestBody);
 
         // WebClient 호출
         String response = webClient.post()
@@ -141,6 +149,6 @@ public class ShortFormServiceImpl implements ShortFormService {
                 .block();
 
         log.info("스크랩 여부 수정 응답: {}", response);
-        return response;
+        return "스크랩 반영에 성공했습니다.";
     }
 }

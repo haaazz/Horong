@@ -1,11 +1,11 @@
 package ssafy.horong.domain.shortForm.command;
 
-import org.joda.time.DateTime;
+import java.time.LocalDateTime;
 
 public record SaveShortFormLogCommand(
         Long shortFormId,
-        DateTime startAt,
-        DateTime endAt
+        LocalDateTime startAt,
+        LocalDateTime endAt
 ) {
 
 }
