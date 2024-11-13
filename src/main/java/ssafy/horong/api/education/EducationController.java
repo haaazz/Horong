@@ -44,8 +44,8 @@ public class EducationController {
     }
 
     @Operation(summary = "한국어 학습 기록 세부 조회", description = "한국어 학습 기록 세부를 조회하는 API입니다.")
-    @GetMapping("/record/{recordId}")
-    public CommonResponse<?> getEducationRecordDetail(@PathVariable Long recordId) {
-        return CommonResponse.ok(educationService.getEducationRecordDetail(recordId));
+    @GetMapping("/record/{wordId}")
+    public CommonResponse<?> getEducationRecordDetail(@PathVariable Long wordId) {
+        return CommonResponse.ok(educationService.getEducationRecordDetail(wordId));
     }
 }

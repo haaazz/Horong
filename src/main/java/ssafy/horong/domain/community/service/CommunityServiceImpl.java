@@ -285,7 +285,8 @@ public class CommunityServiceImpl implements CommunityService {
     public GetPostIdAndMessageListResponse getMessageList(GetMessageListCommand command) {
         List<Message> messages = messageRepository.findAllByChatRoomId(command.roomId());
         Long postId = chatRoomRepository.findPostIdByChatRoomId(command.roomId());
-        Language userLanguage = userUtil.getCurrentUser().getLanguage();
+        User user = userUtil.getCurrentUser();
+        Language userLanguage = user.getLanguage();
 
         List<GetMessageListResponse> messageList = messages.stream()
                 .map(message -> {
@@ -313,7 +314,9 @@ public class CommunityServiceImpl implements CommunityService {
                 })
                 .toList();
 
-        return GetPostIdAndMessageListResponse.of(postId, messageList);
+        Long opponent = messageRepository.findOpponentIdByChatRoomIdAndUserId(command.roomId(), user.getId());
+
+        return GetPostIdAndMessageListResponse.of(postId, opponent, messageList);
     }
 
 
