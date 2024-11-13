@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -315,6 +316,7 @@ public class CommunityServiceImpl implements CommunityService {
 
 
     @Override
+    @Cacheable(value = "postCache", key = "#id")
     public GetPostResponse getPostById(Long id) {
         log.info("게시글 조회: {}", id);
         Post post = getPost(id);
@@ -347,25 +349,34 @@ public class CommunityServiceImpl implements CommunityService {
     public Page<GetPostResponse> getPostList(Pageable pageable, String boardType) {
         log.info("모든 게시글 조회 (페이지네이션)");
 
+        // 1. 데이터베이스에서 정렬을 처리하도록 Pageable에 정렬 조건 추가
         Pageable sortedPageable = PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
 
+        // 2. 데이터베이스에서 게시글 목록을 가져옴 (필터링은 DB에서 처리할 수도 있음)
         Page<Post> postPage = postRepository.findByType(BoardType.valueOf(boardType), sortedPageable);
+
+        // 현재 사용자의 언어 가져오기
         Language language = getCurrentUser().getLanguage();
 
+        // 3. 스트림을 사용해 각 게시글을 GetPostResponse로 변환
         List<GetPostResponse> postResponses = postPage.getContent().stream()
-                .filter(post -> post.getDeletedAt() == null)
+                .filter(post -> post.getDeletedAt() == null)  // 삭제되지 않은 게시글만 필터링
                 .map(post -> {
                     String content = getContentByLanguage(post, language, CONTENT);
                     String title = getContentByLanguage(post, language, TITLE);
 
+                    // 댓글도 정렬해서 변환
                     List<GetCommentResponse> commentResponses = convertToCommentResponse(
-                            post.getComments().stream().sorted(Comparator.comparing(Comment::getCreatedAt).reversed()).toList()
+                            post.getComments().stream()
+                                    .sorted(Comparator.comparing(Comment::getCreatedAt).reversed())  // 댓글을 최신순으로 정렬
+                                    .toList()
                     );
 
+                    // 4. S3에서 프로필 이미지를 가져오는 부분은 캐싱하거나 비동기 처리 고려 가능
                     return new GetPostResponse(
                             post.getId(),
                             title,
@@ -379,6 +390,7 @@ public class CommunityServiceImpl implements CommunityService {
                 })
                 .toList();
 
+        // 5. PageImpl로 반환 (총 게시글 수 포함)
         return new PageImpl<>(postResponses, sortedPageable, postPage.getTotalElements());
     }
 

@@ -27,7 +27,7 @@ public class Post {
     @Column(name = "image_url")
     private List<String> images;
 
-    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Comment> comments;
 
     @ManyToOne
