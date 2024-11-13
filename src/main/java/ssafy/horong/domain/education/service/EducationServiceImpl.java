@@ -166,7 +166,7 @@ public class EducationServiceImpl implements EducationService {
                 .map(dateEntry -> {
                     LocalDate date = dateEntry.getKey();
                     List<GetEducationRecordByWordResponse> wordResponses = dateEntry.getValue().entrySet().stream()
-                            .map(wordEntry -> new GetEducationRecordByWordResponse(wordEntry.getKey(), wordEntry.getValue()))
+                            .map(wordEntry -> new GetEducationRecordByWordResponse(wordEntry.getKey(), educationRepository.findByWord(wordEntry.getKey()).getId(), wordEntry.getValue()))
                             .collect(Collectors.toList());
                     return new GetEducationRecordByDayResponse(date, wordResponses);
                 })
@@ -175,7 +175,6 @@ public class EducationServiceImpl implements EducationService {
         // 변환된 리스트를 사용하여 최종 응답 생성
         return new GetAllEducationRecordResponse(dayResponses);
     }
-
 
     @Transactional
     public EducationRecordResponse saveEducationRecord(SaveEduciatonRecordCommand command) {
@@ -296,17 +295,20 @@ public class EducationServiceImpl implements EducationService {
                 .toList();
     }
 
-    public EducationRecordResponse getEducationRecordDetail(Long recordId) {
-        EducationRecord educationRecord = educationRecordRepository.findById(recordId).orElseThrow();
+    public List<EducationRecordResponse> getEducationRecordDetail(Long wordId) {
+        User user = userUtil.getCurrentUser();
+        List<EducationRecord> educationRecords = educationRecordRepository.findByEducationIdAndUserId(wordId, user.getId());
 
-        return new EducationRecordResponse(
-                educationRecord.getId(),
-                educationRecord.getText(),
-                educationRecord.getCer(),
-                educationRecord.getGtIdx(),
-                educationRecord.getHypIdx(),
-                s3Util.getS3UrlFromS3(educationRecord.getAudio())
-        );
+        // EducationRecord 리스트를 EducationRecordResponse 리스트로 변환
+        return educationRecords.stream()
+                .map(record -> new EducationRecordResponse(
+                        record.getId(),
+                        record.getText(),
+                        record.getCer(),
+                        record.getGtIdx(),
+                        record.getHypIdx(),
+                        s3Util.getS3UrlFromS3(record.getAudio())  // S3 URL 변환
+                ))
+                .collect(Collectors.toList());
     }
-
 }
