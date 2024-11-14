@@ -16,6 +16,7 @@ import ssafy.horong.api.CommonResponse;
 import ssafy.horong.api.community.request.*;
 import ssafy.horong.api.community.response.*;
 import ssafy.horong.api.health.TestRequest;
+import ssafy.horong.common.util.UserUtil;
 import ssafy.horong.domain.community.entity.BoardType;
 import ssafy.horong.domain.community.entity.ChatRoom;
 import ssafy.horong.domain.community.repository.ChatRoomRepository;
@@ -32,6 +33,7 @@ import java.util.Map;
 public class CommunityController {
     private final CommunityService communityService;
     private final ChatRoomRepository chatRoomRepository;
+    private final UserUtil userUtil;
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "게시글 생성", description = """
@@ -203,7 +205,7 @@ public class CommunityController {
             @RequestParam Long postId,
             @RequestParam Long userId) {
         log.info("[CommunityController] 채팅방 존재 여부 확인 >>>> request: {}, {}", postId, userId);
-        Long response = chatRoomRepository.findChatRoomIdByUserAndPost(userId, postId).orElse(-1L);
+        Long response = chatRoomRepository.findChatRoomIdByUserAndPost(userUtil.getCurrentUser().getId(), userId, postId).orElse(-1L);
         return CommonResponse.ok(response);
     }
 }
