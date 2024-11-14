@@ -5,7 +5,7 @@ public record ShortFromListResponse(
         String content,
         String image,
         String audio,
-        Integer is_saved,
-        Boolean preference
+        Boolean is_saved,
+        Integer preference
 ) {
 }
