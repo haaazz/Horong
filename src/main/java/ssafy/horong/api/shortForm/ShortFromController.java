@@ -38,7 +38,7 @@ public class ShortFromController {
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "숏폼 리스트 조회", description = "로그인한 사용자의 숏폼 리스트를 조회합니다.")
-    @GetMapping("")
+    @GetMapping("preferences")
     public CommonResponse<List<ShortFromResponse>> getPreferenceList() {
         List<ShortFromResponse> response = shortFormService.getPreferenceList();
         return CommonResponse.ok(response);
@@ -46,7 +46,7 @@ public class ShortFromController {
 
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "숏폼 리스트 조회", description = "로그인한 사용자의 숏폼 리스트를 조회합니다.")
-    @GetMapping("")
+    @GetMapping("liked")
     public CommonResponse<List<ShortFromResponse>> getLikedList() {
         List<ShortFromResponse> response = shortFormService.getLikedList();
         return CommonResponse.ok(response);
