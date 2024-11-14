@@ -31,7 +31,7 @@ public class NotificationUtil {
         combinedNotifications.addAll(unreadCommentNotifications);
         combinedNotifications.addAll(unreadMessageNotifications);
 
-        combinedNotifications.sort(Comparator.comparing(Notification::getCreatedAt).reversed());
+        combinedNotifications.sort(Comparator.comparing(Notification::getCreatedAt));
 
         // Convert to DTOs
         List<NotificationResponse> notificationResponse = NotificationResponse.convertToNotificationDTOs(combinedNotifications, user.getLanguage());
@@ -39,8 +39,6 @@ public class NotificationUtil {
         // Send DTOs instead of entities
         sendNotificationToUser(notificationResponse, user.getId());
     }
-
-
 
     public void sendNotificationToUser(List<NotificationResponse> notifications, Long userId) {
         if (notifications == null || notifications.isEmpty()) {

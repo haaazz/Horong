@@ -11,6 +11,7 @@ import ssafy.horong.api.shortForm.request.ModifyIsSavedRequest;
 import ssafy.horong.api.shortForm.request.ModifyPreferenceRequest;
 import ssafy.horong.api.shortForm.request.SaveShortFormLogRequest;
 import ssafy.horong.api.shortForm.response.ShortFromListResponse;
+import ssafy.horong.api.shortForm.response.ShortFromResponse;
 import ssafy.horong.domain.shortForm.command.ModifyIsSavedCommand;
 import ssafy.horong.domain.shortForm.command.SaveShortFormLogCommand;
 import ssafy.horong.domain.shortForm.command.ModifyPreferenceCommand;
@@ -30,8 +31,24 @@ public class ShortFromController {
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     @Operation(summary = "숏폼 리스트 조회", description = "로그인한 사용자의 숏폼 리스트를 조회합니다.")
     @GetMapping("")
-    public CommonResponse<List<ShortFromListResponse>> getShortFormList() {
-        List<ShortFromListResponse> response = shortFormService.getShortFormList();
+    public CommonResponse<List<ShortFromResponse>> getShortFormList() {
+        List<ShortFromResponse> response = shortFormService.getShortFormList();
+        return CommonResponse.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "숏폼 리스트 조회", description = "로그인한 사용자의 숏폼 리스트를 조회합니다.")
+    @GetMapping("preferences")
+    public CommonResponse<List<ShortFromResponse>> getPreferenceList() {
+        List<ShortFromResponse> response = shortFormService.getPreferenceList();
+        return CommonResponse.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "숏폼 리스트 조회", description = "로그인한 사용자의 숏폼 리스트를 조회합니다.")
+    @GetMapping("liked")
+    public CommonResponse<List<ShortFromResponse>> getLikedList() {
+        List<ShortFromResponse> response = shortFormService.getLikedList();
         return CommonResponse.ok(response);
     }
 

@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import ssafy.horong.api.shortForm.response.ShortFromListResponse;
+import ssafy.horong.api.shortForm.response.ShortFromResponse;
 import ssafy.horong.common.exception.data.DataNotFoundException;
 import ssafy.horong.common.properties.WebClientProperties;
 import ssafy.horong.common.util.SecurityUtil;
@@ -29,7 +30,7 @@ public class ShortFormServiceImpl implements ShortFormService {
     private final WebClientProperties webClientProperties;
     private final UserUtil userUtil;
 
-    public List<ShortFromListResponse> getShortFormList() {
+    public List<ShortFromResponse> getShortFormList() {
         // 로그인된 사용자의 ID 가져오기
         Long userId = userUtil.getCurrentUser().getId();
 
@@ -37,7 +38,7 @@ public class ShortFormServiceImpl implements ShortFormService {
         String requestUrl = webClientProperties.url() + "/shortform/" + userId;
 
         // WebClient 호출
-        List<ShortFromListResponse> response = webClient.get()
+        List<ShortFromResponse> response = webClient.get()
                 .uri(requestUrl)
                 .retrieve()
                 .onStatus(
@@ -46,7 +47,61 @@ public class ShortFormServiceImpl implements ShortFormService {
                                 .defaultIfEmpty("Unknown error")
                                 .flatMap(errorBody -> Mono.error(new DataNotFoundException()))
                 )
-                .bodyToFlux(ShortFromListResponse.class)
+                .bodyToFlux(ShortFromResponse.class)
+                .collectList()
+                .blockOptional()
+                .orElseThrow(DataNotFoundException::new);
+
+        log.info("response: {}", response);
+
+        return response;
+    }
+
+    public List<ShortFromResponse> getPreferenceList() {
+        // 로그인된 사용자의 ID 가져오기
+        Long userId = userUtil.getCurrentUser().getId();
+
+        // 요청 URL 생성
+        String requestUrl = webClientProperties.url() + "/shortform/preference/" + userId;
+
+        // WebClient 호출
+        List<ShortFromResponse> response = webClient.get()
+                .uri(requestUrl)
+                .retrieve()
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                .defaultIfEmpty("Unknown error")
+                                .flatMap(errorBody -> Mono.error(new DataNotFoundException()))
+                )
+                .bodyToFlux(ShortFromResponse.class)
+                .collectList()
+                .blockOptional()
+                .orElseThrow(DataNotFoundException::new);
+
+        log.info("response: {}", response);
+
+        return response;
+    }
+
+    public List<ShortFromResponse> getLikedList() {
+        // 로그인된 사용자의 ID 가져오기
+        Long userId = userUtil.getCurrentUser().getId();
+
+        // 요청 URL 생성
+        String requestUrl = webClientProperties.url() + "/shortform/is_saved/" + userId;
+
+        // WebClient 호출
+        List<ShortFromResponse> response = webClient.get()
+                .uri(requestUrl)
+                .retrieve()
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                .defaultIfEmpty("Unknown error")
+                                .flatMap(errorBody -> Mono.error(new DataNotFoundException()))
+                )
+                .bodyToFlux(ShortFromResponse.class)
                 .collectList()
                 .blockOptional()
                 .orElseThrow(DataNotFoundException::new);
