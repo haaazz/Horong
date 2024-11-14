@@ -103,8 +103,7 @@ public class EducationServiceImpl implements EducationService {
                 // 변환된 TodayTranslatedWordResponse를 translatedWords에 추가
                 translatedWords.add(response);
             }
-        }
-        else {
+        } else {
             for (Education education : todayWords) {
                 log.info("education: {}", education);
 
@@ -166,7 +165,16 @@ public class EducationServiceImpl implements EducationService {
                 .map(dateEntry -> {
                     LocalDate date = dateEntry.getKey();
                     List<GetEducationRecordByWordResponse> wordResponses = dateEntry.getValue().entrySet().stream()
-                            .map(wordEntry -> new GetEducationRecordByWordResponse(wordEntry.getKey(), educationRepository.findByWord(wordEntry.getKey()).getId(), wordEntry.getValue()))
+                            .map(wordEntry -> {
+                                Education education = educationRepository.findByWord(wordEntry.getKey());
+                                return new GetEducationRecordByWordResponse(
+                                        wordEntry.getKey(),
+                                        education.getId(),
+                                        education.getPronunciation(),
+                                        education.getDefinition(),
+                                        wordEntry.getValue()
+                                );
+                            })
                             .collect(Collectors.toList());
                     return new GetEducationRecordByDayResponse(date, wordResponses);
                 })
@@ -307,20 +315,26 @@ public class EducationServiceImpl implements EducationService {
         return dates;
     }
 
-    public List<EducationRecordResponse> getEducationRecordDetail(Long wordId) {
+    public GetEducationRecordByWordResponse getEducationRecordDetail(Long wordId) {
         User user = userUtil.getCurrentUser();
         List<EducationRecord> educationRecords = educationRecordRepository.findByEducationIdAndUserIdWithEducation(wordId, user.getId());
 
-        // EducationRecord 리스트를 EducationRecordResponse 리스트로 변환
-        return educationRecords.stream()
-                .map(record -> new EducationRecordResponse(
-                        record.getId(),
-                        record.getText(),
-                        record.getCer(),
-                        record.getGtIdx(),
-                        record.getHypIdx(),
-                        s3Util.getS3UrlFromS3(record.getAudio())  // S3 URL 변환
-                ))
-                .collect(Collectors.toList());
+        GetEducationRecordByWordResponse response = new GetEducationRecordByWordResponse(
+                educationRecords.get(0).getEducation().getWord(),
+                wordId,
+                educationRecords.get(0).getEducation().getPronunciation(),
+                educationRecords.get(0).getEducation().getDefinition(),
+                educationRecords.stream()
+                        .map(record -> new EducationRecordResponse(
+                                record.getId(),
+                                record.getText(),
+                                record.getCer(),
+                                record.getGtIdx(),
+                                record.getHypIdx(),
+                                s3Util.getS3UrlFromS3(record.getAudio())
+                        ))
+                        .collect(Collectors.toList())
+    );
+        return response;
     }
 }
