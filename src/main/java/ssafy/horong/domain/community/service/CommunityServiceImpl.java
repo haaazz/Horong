@@ -246,7 +246,6 @@ public class CommunityServiceImpl implements CommunityService {
         }
     }
 
-
     @Override
     public List<GetAllMessageListResponse> getAllMessageList() {
         List<ChatRoom> chatRooms = chatRoomRepository.findAllByUser(userUtil.getCurrentUser());
