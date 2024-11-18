@@ -43,16 +43,17 @@ public class EducationServiceImpl implements EducationService {
 
     @Transactional
     public TodayWordsResponse getTodayWords() {
-        LocalDateTime today = LocalDateTime.now();
+        LocalDate today = LocalDate.now();
         User currentUser = userUtil.getCurrentUser();
 
         // 오늘의 EducationDay를 찾거나 없으면 새로 생성
-        EducationDay educationDay = educationDayRepository.findTopByUserAndCreatedAtBeforeTodayOrderByDayDesc(currentUser, today)
+        EducationDay educationDay = educationDayRepository.findTopByUserAndCreatedAtDateOrderByDayDesc(currentUser, today)
                 .orElseGet(() -> {
                     // 최근의 day 값으로 새로운 EducationDay 생성
                     int recentDay = educationDayRepository.findTopByUserOrderByCreatedAtDesc(currentUser)
                             .map(EducationDay::getDay)
                             .orElse(0);
+                    log.info("recentDay: {}", recentDay);
 
                     int newDayValue = (recentDay == 0) ? 1 : recentDay + 1;
 
@@ -66,7 +67,7 @@ public class EducationServiceImpl implements EducationService {
 
                     return educationDayRepository.save(newEducationDay);
                 });
-
+        log.info("educationDay: {}", educationDay);
         // 오늘의 단어 리스트 조회
         List<Education> todayWords = educationRepository.findByDay(educationDay.getDay());
 
@@ -239,8 +240,8 @@ public class EducationServiceImpl implements EducationService {
 
         // 기존의 EducationDay를 찾거나 오늘 날짜로 새로운 EducationDay 생성
         User currentUser = userUtil.getCurrentUser();
-        LocalDateTime today = LocalDateTime.now();
-        EducationDay educationDay = educationDayRepository.findTopByUserAndCreatedAtBeforeTodayOrderByDayDesc(currentUser, today)
+        LocalDate today = LocalDate.now();
+        EducationDay educationDay = educationDayRepository.findTopByUserAndCreatedAtDateOrderByDayDesc(currentUser, today)
                 .orElseGet(() -> {
                     // 오늘의 EducationDay가 없을 때 가장 최근의 day 값으로 새로 생성
                     int recentDay = educationDayRepository.findTopByUserOrderByCreatedAtDesc(currentUser)
