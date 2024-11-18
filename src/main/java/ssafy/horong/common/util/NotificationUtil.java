@@ -63,7 +63,7 @@ public class NotificationUtil {
 
     public SseEmitter createSseEmitter() {
         Long userId = SecurityUtil.getLoginMemberId().orElseThrow();
-        SseEmitter emitter = new SseEmitter(600000L); // 10분 타임아웃
+        SseEmitter emitter = new SseEmitter(10000L); // 10분 타임아웃
 
         // 해당 userId의 리스트를 초기화하고 emitter 추가
         emitters.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(emitter);

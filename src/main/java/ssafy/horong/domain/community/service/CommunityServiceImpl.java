@@ -422,6 +422,8 @@ public class CommunityServiceImpl implements CommunityService {
 
                     User author = userRepository.findByNicknameAndIsDeletedFalse(postDocument.getAuthor()).orElse(null);
 
+                    log.info("postlog {}",post);
+
                     return new GetPostResponse(
                             postDocument.getPostId(),
                             title,
