@@ -12,6 +12,8 @@ import ssafy.horong.api.member.request.PasswordUpdateRequest;
 import ssafy.horong.api.member.request.UserSignupRequest;
 import ssafy.horong.api.member.request.UserUpdateRequest;
 import ssafy.horong.api.member.response.*;
+import ssafy.horong.common.util.SecurityUtil;
+import ssafy.horong.common.util.UserUtil;
 import ssafy.horong.domain.member.common.Language;
 import ssafy.horong.domain.member.service.UserService;
 
@@ -24,6 +26,7 @@ import java.util.List;
 @Tag(name = "User", description = "회원관리")
 public class MemberController {
     private final UserService userService;
+    private final UserUtil userUtil;
 
     @Operation(summary = "회원가입", description = """
          소셜로그인 시 저장된 임시 회원 정보를 정식 회원으로 업데이트하는 API입니다.
@@ -133,5 +136,14 @@ public class MemberController {
         log.info("[UserController] 프로필 이미지 변경 >>>> profileImage: {}", profileImage);
         UserProfileDetailResponse response = userService.updateProfileImage(profileImage);
         return CommonResponse.ok(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @Operation(summary = "사용자 언어 조회", description = "사용자 언어를 조회하는 API입니다.")
+    @GetMapping("/language")
+    public CommonResponse<Language> getLanguage() {
+        log.info("[UserController] 사용자 언어 조회");
+        Language language = userUtil.getCurrentUser().getLanguage();
+        return CommonResponse.ok(language);
     }
 }
