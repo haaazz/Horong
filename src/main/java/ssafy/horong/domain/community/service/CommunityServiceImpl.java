@@ -559,9 +559,9 @@ public class CommunityServiceImpl implements CommunityService {
             String safeContent = Jsoup.clean(request.content(), Safelist.none());
             String plainText = escapeHtml(safeContent);
 
-            if (plainText.length() > 255) {
-                throw new ContentTooLongExeption();
-            }
+//            if (plainText.length() > 255) {
+//                throw new ContentTooLongExeption();
+//            }
         }
     }
 
